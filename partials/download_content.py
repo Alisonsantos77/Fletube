@@ -1,12 +1,35 @@
 import flet as ft
+from utils.extract_thumbnail import extract_thumbnail_url
+from utils.file_picker_utils import setup_file_picker
 
 
 def download_content(page: ft.Page):
 
     drop_format_rf = ft.Ref[ft.Dropdown]()
+    img_downloader_rf = ft.Ref[ft.Image]()
+
+    def update_thumbnail(e):
+        video_url = input_link.value
+        try:
+            thumb_url = extract_thumbnail_url(video_url)
+            img_downloader_rf.current.src = thumb_url
+            img_downloader_rf.current.update()
+        except ValueError as ve:
+            status_text.value = str(ve)
+            status_text.color = ft.colors.ERROR
+            status_text.update()
+
+    def on_directory_selected(directory_path):
+        # Exibe o diretório selecionado para testar o valor
+        print(f"Diretório selecionado: {directory_path}")
+        status_text.value = f"Diretório selecionado: {directory_path}"
+        status_text.update()
+
+    file_picker = setup_file_picker(page, on_directory_selected)
 
     img_downloader = ft.Image(
-        src="/images/logo-fletube.png",
+        src="/images/logo.png",
+        ref=img_downloader_rf,
         width=400,
         height=400,
         visible=True,
@@ -26,6 +49,7 @@ def download_content(page: ft.Page):
         content_padding=ft.padding.all(10),
         hint_text="Cole o link do YouTube aqui...",
         prefix_icon=ft.icons.LINK,
+        on_change=update_thumbnail,
     )
 
     format_dropdown = ft.Dropdown(
@@ -45,6 +69,34 @@ def download_content(page: ft.Page):
         ],
     )
 
+    def start_download(e):
+        print(f"Input URL: {input_link.value}")
+        print(f"Formato selecionado: {drop_format_rf.current.value}")
+
+        # Se o diretório já foi selecionado, ele será exibido
+        default_dir = page.client_storage.get("download_directory")
+        default_format = page.client_storage.get("default_format")
+        
+        if default_dir and default_dir != "Nenhum diretório selecionado!":
+            print(f"Usando diretório padrão: {default_dir}")
+        else:
+            # Se o diretório não foi selecionado ainda
+            file_picker.get_directory_path()
+        
+        if default_format:
+            print(f"Formato padrão: {default_format}")
+            drop_format_rf.current.value = default_format
+            drop_format_rf.current.update()
+        else:
+            # Se o formato padrão não foi definido ainda
+            drop_format_rf.current.value = "mp3"
+            drop_format_rf.current.update()
+
+        # Simulando salvamento na sessão
+        print(
+            f"Salvando na sessão: Diretório - {default_dir}, URL - {input_link.value}, Formato - {drop_format_rf.current.value}"
+        )
+
     download_button = ft.ElevatedButton(
         text="Iniciar Download",
         icon=ft.icons.DOWNLOAD,
@@ -61,19 +113,13 @@ def download_content(page: ft.Page):
             animation_duration=500,
             shape=ft.RoundedRectangleBorder(radius=6),
         ),
+        on_click=start_download,
     )
 
     status_text = ft.Text(
         value="Aguardando o download...",
         color=ft.colors.PRIMARY,
         size=16,
-    )
-
-    img_teste = ft.Image(
-        src="https://img.youtube.com/vi/jQMsWL0g0jc/hqdefault.jpg",
-        width=100,
-        height=100,
-        fit=ft.ImageFit.CONTAIN,
     )
 
     return ft.Container(
