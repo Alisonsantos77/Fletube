@@ -1,7 +1,7 @@
 import logging
 import flet as ft
 from routes import setup_routes
-from utils.theme import DarkVideoQTheme, RelaxVideoQTheme
+from utils.theme import BlueVibesDarkTheme, BlueVibesLightTheme
 
 # Configurar logging nativo
 logging.basicConfig(
@@ -14,10 +14,10 @@ logging.getLogger("flet_core").setLevel(logging.INFO)
 
 def toggle_theme(page: ft.Page, theme_mode: ft.ThemeMode):
     if theme_mode == ft.ThemeMode.DARK:
-        page.theme = DarkVideoQTheme()
+        page.theme = BlueVibesDarkTheme()
         logging.info("Tema: Dark")
     else:
-        page.theme = RelaxVideoQTheme()
+        page.theme = BlueVibesLightTheme()
         logging.info("Tema: Light")
     page.theme_mode = theme_mode
     page.client_storage.set("theme_mode", theme_mode.name)
