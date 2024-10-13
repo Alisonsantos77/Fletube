@@ -26,11 +26,11 @@ def setup_routes(page: ft.Page):
                 route="/downloads",
                 appbar=ft.AppBar(bgcolor=ft.colors.TRANSPARENT),
                 controls=[DownloadPage(page)],
-                scroll=ft.ScrollMode.AUTO,
                 drawer=create_drawer(page),
             )
         )
         if page.route == "/historico":
+            logging.info("Rota alterada para: /historico")
             page.title = "Histórico - Fletube"
             page.views.append(
                 ft.View(
@@ -42,6 +42,7 @@ def setup_routes(page: ft.Page):
                 )
             )
         elif page.route == "/configuracoes":
+            logging.info("Rota alterada para: /configuracoes")
             page.title = "Configurações - Fletube"
             page.views.append(
                 ft.View(
