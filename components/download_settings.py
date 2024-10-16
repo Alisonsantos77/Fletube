@@ -28,6 +28,7 @@ def DownloadSettings(page: ft.Page):
     directory_value = page.client_storage.get("download_directory")
     if directory_value is None:
         directory_value = "Nenhum diretório selecionado!"
+        
 
     directory_text = ft.Text(
         value=directory_value,
@@ -45,43 +46,53 @@ def DownloadSettings(page: ft.Page):
     download_format_dropdown = ft.Dropdown(
         ref=download_format_dropdown_ref,
         label="Formato de Download Padrão",
+        value=page.client_storage.get("selected_format")
+        or page.client_storage.get("default_format")
+        or "mp4",
         options=[
             ft.dropdown.Option("mp4", "MP4"),
+            ft.dropdown.Option("mkv", "MKV"),
+            ft.dropdown.Option("flv", "FLV"),
+            ft.dropdown.Option("webm", "WEBM"),
+            ft.dropdown.Option("avi", "AVI"),
             ft.dropdown.Option("mp3", "MP3"),
+            ft.dropdown.Option("aac", "AAC"),
+            ft.dropdown.Option("wav", "WAV"),
+            ft.dropdown.Option("m4a", "M4A"),
+            ft.dropdown.Option("opus", "OPUS"),
         ],
-        value=format_value,
         on_change=lambda e: update_default_format(e.control.value),
     )
 
     return ft.ResponsiveRow(
-            [
-                ft.Container(
-                    content=ft.Column(
-                        [
-                            ft.Text(
-                                "Diretório Padrão para Downloads",
-                                weight=ft.FontWeight.BOLD,
-                            ),
-                            select_directory_button,
-                            directory_text,
-                        ],
-                        spacing=5,
-                    ),
-                    col={"sm": 12, "md": 6},
+        [
+            ft.Container(
+                content=ft.Column(
+                    [
+                        ft.Text(
+                            "Diretório Padrão para Downloads",
+                            weight=ft.FontWeight.BOLD,
+                        ),
+                        select_directory_button,
+                        directory_text,
+                    ],
+                    spacing=5,
                 ),
-                ft.Container(
-                    content=ft.Column(
-                        [
-                            ft.Text(
-                                "Formato de Download Padrão",
-                                weight=ft.FontWeight.BOLD,
-                            ),
-                            download_format_dropdown,
-                        ],
-                        spacing=5,
-                    ),
-                    col={"sm": 12, "md": 6},
+                col={"sm": 12, "md": 6},
+            ),
+            ft.Container(
+                content=ft.Column(
+                    [
+                        ft.Text(
+                            "Formato de Download Padrão",
+                            weight=ft.FontWeight.BOLD,
+                        ),
+                        download_format_dropdown,
+                    ],
+                    spacing=5,
                 ),
-            ],
-            run_spacing=10,
-        )
+                col={"sm": 12, "md": 6},
+            ),
+        ],
+        run_spacing=10,
+    )
