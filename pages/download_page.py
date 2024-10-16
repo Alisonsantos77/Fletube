@@ -7,7 +7,7 @@ def DownloadPage(page: ft.Page):
     page.title = "Fletube"
 
     sidebar = sidebar_list()
-    content = download_content(page)
+    content = download_content(page, sidebar)
 
     return ft.SafeArea(
         content=ft.ResponsiveRow(
