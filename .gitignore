@@ -1,6 +1,6 @@
 # Ignore cache files
-__pycache__/
-*.py[cod]
+__pychache__/
+*.pyc
 
 # Ignore environment folders
 .env/
