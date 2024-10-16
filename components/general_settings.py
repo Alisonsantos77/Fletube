@@ -21,7 +21,6 @@ def GeneralSettings(page: ft.Page):
         page.client_storage.set("language", language_code)
         page.update()
 
-    # Obter o valor do idioma e definir o valor padrão se necessário
     language_value = page.client_storage.get("language")
     if language_value is None:
         language_value = "pt"
@@ -41,7 +40,7 @@ def GeneralSettings(page: ft.Page):
     # Função para enviar feedback e exibir um SnackBar de confirmação
     def send_feedback(feedback_text):
         if feedback_text.strip():
-            # Lógica de envio do feedback (a ser implementada)
+            #TODO: Lógica de envio do feedback (a ser implementada)
             feedback_textfield.value = ""
             feedback_textfield.update()
             page.snack_bar = ft.SnackBar(
@@ -57,7 +56,6 @@ def GeneralSettings(page: ft.Page):
             page.snack_bar.open = True
         page.update()
 
-    # Campo de texto para feedback
     feedback_textfield = ft.TextField(
         label="Envie seu Feedback",
         multiline=True,
@@ -66,14 +64,12 @@ def GeneralSettings(page: ft.Page):
         width=500,
     )
 
-    # Botão para enviar feedback
     send_feedback_button = ft.ElevatedButton(
         text="Enviar Feedback",
         icon=ft.icons.SEND,
         on_click=lambda e: send_feedback(feedback_textfield.value),
     )
 
-    # Layout da seção de configurações gerais
     return ft.Column(
         [
             ft.Container(
