@@ -13,7 +13,6 @@ REDIRECT_URL = os.getenv("REDIRECT_URL")
 
 
 def LoginPage(page: ft.Page):
-
     github_provider = GitHubOAuthProvider(
         client_id=GITHUB_CLIENT_ID,
         client_secret=GITHUB_CLIENT_SECRET,
