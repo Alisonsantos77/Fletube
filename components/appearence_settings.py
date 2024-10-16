@@ -1,12 +1,24 @@
 import flet as ft
-from utils.fonts_loader import load_custom_fonts
 
 
 def AppearanceSettings(page: ft.Page):
     theme_switch_ref = ft.Ref[ft.Switch]()
     font_dropdown_ref = ft.Ref[ft.Dropdown]()
 
-    # Obter o valor do tema escuro e definir o valor padrão se necessário
+    def load_custom_fonts():
+        page.fonts = {
+            "Kanit": "/fonts/Kanit.ttf",
+            "Open Sans": "/fonts/OpenSans.ttf",
+            "BradBunR": "/fonts/BradBunR.ttf",
+            "Heathergreen": "/fonts/Heathergreen.otf",
+            "Ashemark": "/fonts/Ashemark regular.otf",
+            "EmOne-SemiBold": "/fonts/EmOne-SemiBold.otf",
+            "Gadner": "/fonts/Gadner.ttf",
+        }
+        page.update()
+
+    load_custom_fonts()
+
     dark_theme_value = page.client_storage.get("dark_theme")
     if dark_theme_value is None:
         dark_theme_value = False
@@ -28,11 +40,20 @@ def AppearanceSettings(page: ft.Page):
         if font_family == "Padrão":
             page.theme = ft.Theme()
         else:
-            page.fonts = load_custom_fonts(font_family)
             page.theme = ft.Theme(font_family=font_family)
         page.update()
 
-    font_options = ["Padrão", "Kanit", "Open Sans"]
+    # Adicionando as opções de fontes disponíveis
+    font_options = [
+        "Padrão",
+        "Kanit",
+        "Open Sans",
+        "BradBunR",
+        "Heathergreen",
+        "Ashemark",
+        "EmOne-SemiBold",
+        "Gadner",
+    ]
 
     # Obter o valor da fonte da aplicação e definir o valor padrão se necessário
     font_family_value = page.client_storage.get("font_family")
@@ -60,3 +81,4 @@ def AppearanceSettings(page: ft.Page):
         ],
         run_spacing=10,
     )
+
