@@ -77,4 +77,5 @@ def main(page: ft.Page):
 
 if __name__ == "__main__":
     logging.info("Inicializando Fletube")
-    ft.app(target=main, assets_dir="assets")
+    # ft.app(target=main, assets_dir="assets")
+    ft.app(target=main, assets_dir="assets", view=ft.AppView.WEB_BROWSER, port=5354)
