@@ -4,7 +4,9 @@ from pages.download_page import DownloadPage
 from pages.history_page import HistoryPage
 from pages.settings_page import SettingsPage
 from pages.page_404 import PageNotFound
+from pages.login_page import LoginPage
 from components.drawer import create_drawer
+from components.user_menu import create_user_menu
 
 # Configurando o logging nativo
 logging.basicConfig(
@@ -21,35 +23,60 @@ def setup_routes(page: ft.Page):
     def route_change(route):
         logging.info(f"Rota alterada para: {route}")
         page.views.clear()
+        page.title = "Fletube"
         page.views.append(
             ft.View(
-                route="/downloads",
-                appbar=ft.AppBar(bgcolor=ft.colors.TRANSPARENT),
-                controls=[DownloadPage(page)],
+                route="/",
                 drawer=create_drawer(page),
+                vertical_alignment=ft.MainAxisAlignment.CENTER,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                controls=[LoginPage(page)],
             )
         )
+        
+        if page.route == "/downloads":
+            page.title = "Downloads - Fletube"
+            page.views.append(
+                ft.View(
+                    route="/downloads",
+                    drawer=create_drawer(page),
+                    appbar=ft.AppBar(
+                        actions=[create_user_menu(page)],
+                    ),
+                    controls=[DownloadPage(page)],
+                    scroll=ft.ScrollMode.AUTO,
+                )
+            )
+
         if page.route == "/historico":
             logging.info("Rota alterada para: /historico")
             page.title = "Histórico - Fletube"
             page.views.append(
                 ft.View(
+                    drawer=create_drawer(page),
                     route="/historico",
-                    appbar=ft.AppBar(bgcolor=ft.colors.TRANSPARENT),
+                    appbar=ft.AppBar(
+                        bgcolor=ft.colors.TRANSPARENT,
+                        actions=[create_user_menu(page)],
+                    ),
                     controls=[HistoryPage(page)],
                     scroll=ft.ScrollMode.AUTO,
-                    drawer=create_drawer(page),
                 )
             )
+
         elif page.route == "/configuracoes":
             logging.info("Rota alterada para: /configuracoes")
             page.title = "Configurações - Fletube"
+            page.views.clear()
             page.views.append(
                 ft.View(
                     route="/configuracoes",
-                    appbar=ft.AppBar(bgcolor=ft.colors.TRANSPARENT),
-                    controls=[SettingsPage(page)],
                     drawer=create_drawer(page),
+                    appbar=ft.AppBar(
+                        bgcolor=ft.colors.TRANSPARENT,
+                        actions=[create_user_menu(page)],
+                    ),
+                    controls=[SettingsPage(page)],
                 )
             )
         elif route == "/404":
@@ -57,9 +84,12 @@ def setup_routes(page: ft.Page):
             page.views.append(
                 ft.View(
                     route="/404",
-                    appbar=ft.AppBar(title=ft.Text("Página Não Encontrada")),
+                    appbar=ft.AppBar(
+                        title=ft.Text("Página Não Encontrada"),
+                        drawer=create_drawer(page),
+                        actions=[create_user_menu(page)],
+                    ),
                     controls=[PageNotFound(page)],
-                    drawer=create_drawer(page),
                 )
             )
         page.update()
