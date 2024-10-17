@@ -58,6 +58,6 @@ def install_ffmpeg(page: ft.Page):
     snack_bar = ft.SnackBar(
         ft.Text("Por favor, baixe e adicione o binário do FFmpeg ao diretório 'bin'.")
     )
-    page.overlay.append(snack_bar)  # Adiciona ao overlay
+    page.overlay.append(snack_bar)
     snack_bar.open = True
     page.update()
