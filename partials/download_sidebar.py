@@ -49,14 +49,14 @@ class SidebarList(ft.Container):
                 value=f"{title}",
                 size=18,
                 weight=ft.FontWeight.BOLD,
-                color=ft.colors.ON_PRIMARY,
+                color=ft.colors.PRIMARY,
                 max_lines=1,
                 overflow=ft.TextOverflow.ELLIPSIS,
             ),
             subtitle=ft.Text(
                 value=f"Formato: {subtitle}",
                 size=14,
-                color=ft.colors.ON_SECONDARY,
+                color=ft.colors.PRIMARY,
             ),
         )
 
@@ -90,30 +90,30 @@ class ItemDownloading(ft.Card):
 
         # Propriedades do Card
         self.elevation = 4  
-        self.bgcolor = ft.colors.SURFACE  
-        self.color = ft.colors.SURFACE_VARIANT
+        self.bgcolor = ft.colors.PRIMARY
+        self.color = ft.colors.PRIMARY
         self.shape = ft.RoundedRectangleBorder(radius=8)
         self.margin = ft.margin.symmetric(vertical=6, horizontal=10)
 
         self.content = ft.ListTile(
             leading=ft.Image(
                 src=self.thumbnail,
-                width=45, 
+                width=45,
                 height=45,
                 fit=ft.ImageFit.COVER,
             ),
             title=ft.Text(
                 value=f"{self.title}",
-                size=16, 
+                size=16,
                 weight=ft.FontWeight.NORMAL,
-                color=ft.colors.ON_SURFACE, 
+                color=ft.colors.PRIMARY,
                 max_lines=1,
                 overflow=ft.TextOverflow.ELLIPSIS,
             ),
             subtitle=ft.Text(
                 value=f"Formato: {self.format}",
                 size=12,
-                color=ft.colors.ON_SURFACE_VARIANT,
+                color=ft.colors.PRIMARY,
             ),
             trailing=icon_widget,
         )
