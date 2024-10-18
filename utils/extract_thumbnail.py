@@ -1,25 +1,36 @@
-import re
+import yt_dlp
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def extract_thumbnail_url(video_url):
     """
-    Função que extrai o ID do vídeo da URL do YouTube e retorna a URL da thumbnail.
+    Extrai a URL da thumbnail de um vídeo do YouTube.
 
     Args:
-        video_url (str): A URL do vídeo do YouTube.
+        video_url (str): URL do vídeo do YouTube.
 
     Returns:
-        str: A URL da thumbnail.
+        str: URL da thumbnail.
 
     Raises:
-        ValueError: Se a URL do vídeo for inválida e o ID não puder ser extraído.
+        ValueError: Se não for possível extrair a thumbnail.
     """
-    video_id_pattern = r"(?:v=|\/)([0-9A-Za-z_-]{11}).*"
-    match = re.search(video_id_pattern, video_url)
+    ydl_opts = {
+        "quiet": True,
+        "skip_download": True,
+        "force_generic_extractor": False,
+    }
 
-    if match:
-        video_id = match.group(1)
-        thumbnail_url = f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
-        return thumbnail_url
-    else:
-        raise ValueError("URL de vídeo inválida. Não foi possível extrair o ID.")
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        try:
+            info_dict = ydl.extract_info(video_url, download=False)
+            thumbnail_url = info_dict.get("thumbnail")
+            if thumbnail_url:
+                return thumbnail_url
+            else:
+                raise ValueError("Thumbnail não encontrada.")
+        except Exception as e:
+            logger.error(f"Erro ao extrair thumbnail: {e}")
+            raise ValueError("Erro ao extrair thumbnail.")
