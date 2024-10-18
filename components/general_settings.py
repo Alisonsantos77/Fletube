@@ -25,7 +25,6 @@ def GeneralSettings(page: ft.Page):
     if language_value is None:
         language_value = "pt"
 
-    # Dropdown para selecionar idioma
     language_dropdown = ft.Dropdown(
         ref=language_dropdown_ref,
         label="Idioma",
@@ -37,37 +36,26 @@ def GeneralSettings(page: ft.Page):
         on_change=lambda e: update_language(e.control.value),
     )
 
-    # Função para enviar feedback e exibir um SnackBar de confirmação
-    def send_feedback(feedback_text):
-        if feedback_text.strip():
-            #TODO: Lógica de envio do feedback (a ser implementada)
-            feedback_textfield.value = ""
-            feedback_textfield.update()
-            page.snack_bar = ft.SnackBar(
-                content=ft.Text("Obrigado pelo seu feedback!"),
-                bgcolor=ft.colors.GREEN,
-            )
-            page.snack_bar.open = True
-        else:
-            page.snack_bar = ft.SnackBar(
-                content=ft.Text("Por favor, insira seu feedback antes de enviar."),
-                bgcolor=ft.colors.RED,
-            )
-            page.snack_bar.open = True
-        page.update()
-
-    feedback_textfield = ft.TextField(
-        label="Envie seu Feedback",
-        multiline=True,
-        min_lines=3,
-        max_lines=5,
-        width=500,
+    feedback_text = ft.Text(
+        value="Ei, você! 🙋‍♂️ Que tal nos ajudar a melhorar ainda mais este app? Enviar um feedback é rápido, indolor e pode tornar sua experiência (e de outros usuários) ainda melhor! Queremos saber de tudo: elogios, críticas, ideias malucas... Só clicar no botão e mandar ver!",
+        size=16,
+        color=ft.colors.ON_SURFACE,
+        max_lines=3,
+        overflow=ft.TextOverflow.ELLIPSIS,
     )
 
-    send_feedback_button = ft.ElevatedButton(
-        text="Enviar Feedback",
-        icon=ft.icons.SEND,
-        on_click=lambda e: send_feedback(feedback_textfield.value),
+    feedback_button = ft.ElevatedButton(
+        text="Enviar Feedback 👍",
+        icon=ft.icons.FEEDBACK,
+        on_click=lambda e: page.go(
+            "/feedback"
+        ),
+        style=ft.ButtonStyle(
+            bgcolor=ft.colors.SECONDARY,
+            color=ft.colors.ON_SECONDARY,
+            elevation=4,
+            shape=ft.RoundedRectangleBorder(radius=8),
+        ),
     )
 
     return ft.Column(
@@ -81,13 +69,15 @@ def GeneralSettings(page: ft.Page):
             ft.Container(
                 content=ft.Column(
                     [
-                        feedback_textfield,
-                        send_feedback_button,
+                        feedback_text,
+                        feedback_button,
                     ],
                     spacing=10,
                 ),
                 col={"sm": 12, "md": 12},
+                padding=ft.padding.all(10),
             ),
+            ft.Divider(),
         ],
         run_spacing=10,
     )
