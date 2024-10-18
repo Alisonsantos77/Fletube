@@ -5,6 +5,7 @@ from pages.history_page import HistoryPage
 from pages.settings_page import SettingsPage
 from pages.page_404 import PageNotFound
 from pages.login_page import LoginPage
+from pages.feedback_page import FeedbackPage
 from components.drawer import create_drawer
 from components.user_menu import create_user_menu
 
@@ -21,35 +22,33 @@ def setup_routes(page: ft.Page):
     logging.info("Configurando rotas")
 
     def route_change(route):
-        logging.info(f"Rota alterada para: {route}")
+        print(f"Rota alterada para: {route}")
         page.views.clear()
-        page.title = "Fletube"
+        # page.title = "Fletube"
+        # page.views.append(
+        #     ft.View(
+        #         route="/",
+        #         drawer=create_drawer(page),
+        #         vertical_alignment=ft.MainAxisAlignment.CENTER,
+        #         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        #         controls=[LoginPage(page)],
+        #     )
+        # )
+
+        page.title = "Downloads - Fletube"
         page.views.append(
             ft.View(
-                route="/",
+                route="/downloads",
                 drawer=create_drawer(page),
-                vertical_alignment=ft.MainAxisAlignment.CENTER,
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                controls=[LoginPage(page)],
+                appbar=ft.AppBar(
+                    bgcolor=ft.colors.TRANSPARENT,
+                    actions=[create_user_menu(page)],
+                ),
+                controls=[DownloadPage(page)],
             )
         )
-        
-        if page.route == "/downloads":
-            page.title = "Downloads - Fletube"
-            page.views.append(
-                ft.View(
-                    route="/downloads",
-                    drawer=create_drawer(page),
-                    appbar=ft.AppBar(
-                        actions=[create_user_menu(page)],
-                    ),
-                    controls=[DownloadPage(page)],
-                    scroll=ft.ScrollMode.AUTO,
-                )
-            )
 
         if page.route == "/historico":
-            logging.info("Rota alterada para: /historico")
             page.title = "Histórico - Fletube"
             page.views.append(
                 ft.View(
@@ -65,9 +64,7 @@ def setup_routes(page: ft.Page):
             )
 
         elif page.route == "/configuracoes":
-            logging.info("Rota alterada para: /configuracoes")
             page.title = "Configurações - Fletube"
-            page.views.clear()
             page.views.append(
                 ft.View(
                     route="/configuracoes",
@@ -77,6 +74,21 @@ def setup_routes(page: ft.Page):
                         actions=[create_user_menu(page)],
                     ),
                     controls=[SettingsPage(page)],
+                    scroll=ft.ScrollMode.AUTO,
+                )
+            )
+        elif page.route == "/feedback":
+            page.title = "Feedback - Fletube"
+            page.views.append(
+                ft.View(
+                    route="/feedback",
+                    drawer=create_drawer(page),
+                    appbar=ft.AppBar(
+                        bgcolor=ft.colors.TRANSPARENT,
+                        actions=[create_user_menu(page)],
+                    ),
+                    controls=[FeedbackPage(page)],
+                    scroll=ft.ScrollMode.AUTO,
                 )
             )
         elif route == "/404":
