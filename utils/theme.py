@@ -4,14 +4,17 @@ import flet as ft
 def BlueVibesDarkTheme():
     return ft.Theme(
         color_scheme=ft.ColorScheme(
-            primary="#0077B6",  # Cor principal vibrante (azul médio)
-            on_primary="#fefeff",  # Texto sobre a cor primária (branco para contraste)
-            background="#03045E",  # Cor de fundo escura (azul marinho profundo)
-            surface="#023E8A",  # Cor de superfícies (azul escuro)
-            on_surface="#fefeff",  # Texto sobre superfícies (branco para contraste)
-            secondary="#00B4D8",  # Cor secundária (azul claro)
-            on_secondary="#fefeff",  # Texto sobre a cor secundária (branco)
-            on_background="#fefeff",  # Texto sobre fundo (branco)
+            # Cores primárias
+            primary="#0077B6",  # Azul médio, vibrante
+            on_primary="#fefeff",  # Texto branco sobre a cor primária para contraste
+            # Cores de fundo e superfícies
+            background="#03045E",  # Fundo azul marinho profundo
+            on_background="#fefeff",  # Texto branco sobre fundo
+            surface="#023E8A",  # Superfícies em azul escuro
+            on_surface="#fefeff",  # Texto branco sobre superfícies
+            # Cores secundárias
+            secondary="#00B4D8",  # Azul claro secundário
+            on_secondary="#fefeff",  # Texto branco sobre cor secundária
         )
     )
 
@@ -19,13 +22,16 @@ def BlueVibesDarkTheme():
 def BlueVibesLightTheme():
     return ft.Theme(
         color_scheme=ft.ColorScheme(
-            primary="#0096C7",  # Cor principal suave (azul brilhante)
-            on_primary="#03045E",  # Texto sobre a cor primária (azul escuro para contraste)
-            background="#CAF0F8",  # Cor de fundo vibrante (azul muito claro)
-            surface="#ADE8F4",  # Cor de superfícies (azul claro)
-            on_surface="#03045E",  # Texto sobre superfícies (azul escuro)
-            secondary="#48CAE4",  # Cor secundária (azul aqua)
-            on_secondary="#03045E",  # Texto sobre a cor secundária (azul escuro)
-            on_background="#023E8A",  # Texto sobre fundo (azul escuro)
+            # Cores primárias
+            primary="#0096C7",  # Azul brilhante, suave
+            on_primary="#03045E",  # Texto azul escuro para contraste com a cor primária
+            # Cores de fundo e superfícies
+            background="#CAF0F8",  # Fundo azul muito claro, vibrante
+            on_background="#023E8A",  # Texto azul escuro sobre fundo
+            surface="#ADE8F4",  # Superfícies em azul claro
+            on_surface="#03045E",  # Texto azul escuro sobre superfícies
+            # Cores secundárias
+            secondary="#48CAE4",  # Azul aqua secundário
+            on_secondary="#03045E",  # Texto azul escuro sobre cor secundária
         )
     )
