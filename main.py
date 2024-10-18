@@ -6,68 +6,69 @@ from utils.theme import BlueVibesDarkTheme, BlueVibesLightTheme
 # Configurar logging nativo
 logging.basicConfig(
     filename="logs/app.log",  # Arquivo onde os logs serão armazenados
-    format="%(asctime)s %(levelname)s: %(message)s",  # Formato dos logs
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     level=logging.INFO,  # Nível de log (INFO ou DEBUG, conforme necessidade)
 )
 logging.getLogger("flet_core").setLevel(logging.INFO)
 
 
 def toggle_theme(page: ft.Page, theme_mode: ft.ThemeMode):
+    """
+    Alterna o tema da aplicação e salva a escolha no client storage.
+    """
     if theme_mode == ft.ThemeMode.DARK:
         page.theme = BlueVibesDarkTheme()
         logging.info("Tema: Dark")
     else:
         page.theme = BlueVibesLightTheme()
         logging.info("Tema: Light")
+
     page.theme_mode = theme_mode
-    page.client_storage.set("theme_mode", theme_mode.name)
-    page.update()
+    page.client_storage.set(
+        "theme_mode", theme_mode.name
+    )  
+    page.update() 
 
 
 def main(page: ft.Page):
     logging.info("Fletube iniciado")
 
-    theme_mode_value = page.client_storage.get("theme_mode")
-    if theme_mode_value:
-        try:
-            theme_mode = ft.ThemeMode[theme_mode_value]
-            toggle_theme(page, theme_mode)
-        except KeyError:
-            toggle_theme(page, ft.ThemeMode.LIGHT)
+    # Carregar o tema salvo no client_storage
+    dark_theme_value = page.client_storage.get("dark_theme")
+    if dark_theme_value is not None:
+        theme_mode = ft.ThemeMode.DARK if dark_theme_value else ft.ThemeMode.LIGHT
+        toggle_theme(page, theme_mode)
     else:
         toggle_theme(page, ft.ThemeMode.LIGHT)
 
+    # Carregar a fonte salva no client_storage
+    font_family_value = page.client_storage.get("font_family")
+    if font_family_value is not None:
+        page.fonts = {
+            "Kanit": "/fonts/Kanit.ttf",
+            "Open Sans": "/fonts/OpenSans.ttf",
+            "BradBunR": "/fonts/BradBunR.ttf",
+            "Heathergreen": "/fonts/Heathergreen.otf",
+            "Ashemark": "/fonts/Ashemark regular.otf",
+            "EmOne-SemiBold": "/fonts/EmOne-SemiBold.otf",
+            "Gadner": "/fonts/Gadner.ttf",
+        }
+        page.theme = ft.Theme(font_family=font_family_value)
+        page.update()
+
     page.title = "Fletube"
 
-    def alternar_tema(e):
-        current_theme = page.client_storage.get("theme_mode") or "LIGHT"
-        new_theme_mode = (
-            ft.ThemeMode.LIGHT if current_theme == "DARK" else ft.ThemeMode.DARK
-        )
-        toggle_theme(page, new_theme_mode)
-
-    shd = ft.ShakeDetector(
-        minimum_shake_count=2,
-        shake_slop_time_ms=300,
-        shake_count_reset_time_ms=1000,
-        on_shake=lambda _: print("SHAKE DETECTED!"),
-    )
-    page.overlay.append(shd)
-
+    # Gerenciar eventos de teclado
     def on_key_event(e: ft.KeyboardEvent):
         logging.info(f"Tecla: {e.key}")
         if e.key == "F1":
-            page.go("/home")
+            page.go("/")
         elif e.key == "F2":
-            page.go("/questions")
+            page.go("/downloads")
         elif e.key == "F3":
-            page.go("/about")
+            page.go("/historico")
         elif e.key == "F4":
-            page.go("/score")
-        elif e.key == "F5":
-            page.go("/quiz")
-        elif e.key.lower() == "t" or shd:
-            alternar_tema(None)
+            page.go("/configuracoes")
 
     page.on_keyboard_event = on_key_event
 
@@ -77,5 +78,5 @@ def main(page: ft.Page):
 
 if __name__ == "__main__":
     logging.info("Inicializando Fletube")
-    # ft.app(target=main, assets_dir="assets")
-    ft.app(target=main, assets_dir="assets", view=ft.AppView.WEB_BROWSER, port=5354)
+    ft.app(target=main, assets_dir="assets")
+    # ft.app(target=main, assets_dir="assets", view=ft.AppView.WEB_BROWSER, port=5354)
