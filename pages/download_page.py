@@ -1,12 +1,16 @@
 import flet as ft
 from partials.download_content import download_content
-from partials.download_sidebar import sidebar_list
+from partials.download_sidebar import SidebarList
 
 
 def DownloadPage(page: ft.Page):
-    page.title = "Fletube"
+    # Inicialize a sidebar
+    sidebar = SidebarList()
 
-    sidebar = sidebar_list()
+    # Adiciona sidebar à página para garantir que esteja renderizada
+    page.add(sidebar)
+
+    # Inicialize o conteúdo da página
     content = download_content(page, sidebar)
 
     return ft.SafeArea(
