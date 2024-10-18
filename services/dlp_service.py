@@ -1,5 +1,5 @@
 import logging
-import yt_dlp
+from yt_dlp import YoutubeDL
 
 # Configure logging para este módulo
 logging.basicConfig(
@@ -19,17 +19,16 @@ def download_with_ydl(ydl_opts, link):
         ydl_opts (dict): Opções para yt_dlp.
         link (str): A URL do vídeo a ser baixado.
     """
-    logger.info(f"Iniciando download para link: {link}")
+    logger.info("Iniciando download para link: %s", link)
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        with YoutubeDL(ydl_opts) as ydl:
             ydl.download([link])
-        logger.info(f"Download concluído para link: {link}")
     except Exception as e:
-        logger.error(f"Ocorreu um erro durante o download para link {link}: {e}")
+        logger.error("Ocorreu um erro durante o download para link %s: %s", link, e)
         raise e
 
 
-def start_download(link, format, directory, progress_callback):
+def start_download(link, format, diretorio, progress_hook):
     """
     Configura as opções do yt_dlp com base no formato selecionado e inicia o download.
 
@@ -42,13 +41,14 @@ def start_download(link, format, directory, progress_callback):
     logger.info("Iniciando start_download")
 
     ydl_opts = {
-        "outtmpl": f"{directory}/%(title)s.%(ext)s",
-        "progress_hooks": [progress_callback],
-        "verbose": True,
-    }
-
+            'format': f'bestvideo+bestaudio/best',
+            'outtmpl': f'{diretorio}/%(title)s.%(ext)s',
+            'progress_hooks': [progress_hook],
+            # Adicione outras opções conforme necessário
+        }
     # Ajusta as opções de formato com base no formato selecionado
     if format in ["mp3", "aac", "wav", "m4a", "opus"]:
+        logger.info(f"Formatos de áudio selecionados: {format}")
         ydl_opts.update(
             {
                 "format": "bestaudio/best",
@@ -62,6 +62,7 @@ def start_download(link, format, directory, progress_callback):
             }
         )
     elif format in ["mp4", "mkv", "flv", "webm", "avi"]:
+        logger.info(f"Formatos de vídeo selecionados: {format}")
         ydl_opts.update(
             {
                 "format": "bestvideo+bestaudio/best",
@@ -69,6 +70,7 @@ def start_download(link, format, directory, progress_callback):
             }
         )
     else:
+        logger.warning(f"Formato desconhecido, usando configuração padrão: {format}")
         ydl_opts.update({"format": "best"})
 
     logger.debug(f"ydl_opts configurados: {ydl_opts}")
@@ -76,6 +78,5 @@ def start_download(link, format, directory, progress_callback):
     try:
         download_with_ydl(ydl_opts, link)
     except Exception as e:
-        logger.error(f"Erro ao iniciar o download: {e}")
-        #TODO: Criar mais exceptions
-        raise
+        logger.error("Erro ao iniciar o download: %s", str(e))
+        raise e
