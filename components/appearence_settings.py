@@ -19,9 +19,13 @@ def AppearanceSettings(page: ft.Page):
 
     load_custom_fonts()
 
+    # Verificar e aplica o tema salvo no client_storage ao carregar a página
     dark_theme_value = page.client_storage.get("dark_theme")
     if dark_theme_value is None:
         dark_theme_value = False
+    else:
+        page.theme_mode = ft.ThemeMode.DARK if dark_theme_value else ft.ThemeMode.LIGHT
+        page.update()
 
     theme_switch = ft.Switch(
         label="Tema Escuro",
@@ -32,18 +36,23 @@ def AppearanceSettings(page: ft.Page):
 
     def toggle_theme(is_dark):
         page.theme_mode = ft.ThemeMode.DARK if is_dark else ft.ThemeMode.LIGHT
-        page.client_storage.set("dark_theme", is_dark)
+        page.client_storage.set(
+            "dark_theme", is_dark
+        )
         page.update()
 
     def update_font_family(font_family):
-        page.client_storage.set("font_family", font_family)
+        page.client_storage.set(
+            "font_family", font_family
+        ) 
         if font_family == "Padrão":
-            page.theme = ft.Theme()
+            page.theme = ft.Theme() 
         else:
-            page.theme = ft.Theme(font_family=font_family)
+            page.theme = ft.Theme(
+                font_family=font_family
+            ) 
         page.update()
 
-    # Adicionando as opções de fontes disponíveis
     font_options = [
         "Padrão",
         "Kanit",
@@ -59,6 +68,8 @@ def AppearanceSettings(page: ft.Page):
     font_family_value = page.client_storage.get("font_family")
     if font_family_value is None:
         font_family_value = "Padrão"
+    else:
+        update_font_family(font_family_value)
 
     font_dropdown = ft.Dropdown(
         ref=font_dropdown_ref,
@@ -81,4 +92,3 @@ def AppearanceSettings(page: ft.Page):
         ],
         run_spacing=10,
     )
-
