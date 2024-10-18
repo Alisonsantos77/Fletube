@@ -10,7 +10,6 @@ def DownloadSettings(page: ft.Page):
         if directory_path and directory_path != "Nenhum diretório selecionado!":
             directory_text_ref.current.value = directory_path
             directory_text_ref.current.update()
-            # Salvar o diretório no client storage
             page.client_storage.set("download_directory", directory_path)
         else:
             directory_text_ref.current.value = "Nenhum diretório selecionado!"
@@ -47,8 +46,7 @@ def DownloadSettings(page: ft.Page):
         ref=download_format_dropdown_ref,
         label="Formato de Download Padrão",
         value=page.client_storage.get("selected_format")
-        or page.client_storage.get("default_format")
-        or "mp4",
+        or page.client_storage.get("default_format"),
         options=[
             ft.dropdown.Option("mp4", "MP4"),
             ft.dropdown.Option("mkv", "MKV"),
