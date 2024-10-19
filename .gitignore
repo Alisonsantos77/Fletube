@@ -28,3 +28,6 @@ logs/
 *.tmp
 *.bak
 *.swp
+
+# arquivo desnecessário no repositorio
+bin/ffmpeg.exe
