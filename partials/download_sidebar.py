@@ -1,7 +1,6 @@
 import logging
 import flet as ft
 
-# Configure logging para este módulo
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -12,15 +11,11 @@ logger = logging.getLogger(__name__)
 
 
 class SidebarList(ft.Container):
-    """
-    Representa a lista da barra lateral que contém todos os itens de download finalizados.
-    """
-
     def __init__(self):
         super().__init__(
             expand=True,
             content=ft.Column(
-                controls=[],  # Lista de controles para exibir os downloads finalizados
+                controls=[],
                 scroll=ft.ScrollMode.AUTO,
                 spacing=10,
             ),
@@ -28,16 +23,7 @@ class SidebarList(ft.Container):
         self.items = self.content.controls
         logger.info("SidebarList inicializado.")
 
-    def add_download_item(self, title, subtitle, thumbnail_url):
-        """
-        Adiciona um novo item de download à barra lateral.
-
-        Args:
-            title (str): O título do item de download.
-            subtitle (str): O subtítulo ou formato do download.
-            thumbnail_url (str): A URL da imagem de thumbnail.
-        """
-        # Criando o item de download finalizado
+    def add_download_item(self, id, title, subtitle, thumbnail_url):
         item = ft.ListTile(
             leading=ft.Image(
                 src=thumbnail_url,
@@ -58,29 +44,33 @@ class SidebarList(ft.Container):
                 size=14,
                 color=ft.colors.PRIMARY,
             ),
+            data=id,
         )
 
         self.items.append(item)
         self.update()
-        logger.info(f"Item de download adicionado: {title}, formato: {subtitle}")
+        logger.info(
+            f"Item de download adicionado: ID: {id}, título: {title}, formato: {subtitle}"
+        )
 
 
 class ItemDownloading(ft.Card):
     def __init__(
         self,
+        id: str,
         title: str,
         subtitle: str,
-        thumbnail: str,
+        thumbnail_url: str,
         format: str = "MP4",
         has_error: bool = False,
     ):
         super().__init__()
 
-        self.thumbnail = thumbnail
+        self.id = id
+        self.thumbnail = thumbnail_url
         self.title = title
         self.format = format
 
-        # Ícone baseado em erro
         icon_to_use = "/images/logo.png" if not has_error else ft.icons.CLOSE
         icon_widget = (
             ft.Image(src=icon_to_use, width=30, height=30, fit=ft.ImageFit.CONTAIN)
@@ -88,8 +78,7 @@ class ItemDownloading(ft.Card):
             else ft.Icon(name=icon_to_use, color=ft.colors.RED, size=30)
         )
 
-        # Propriedades do Card
-        self.elevation = 4  
+        self.elevation = 4
         self.bgcolor = ft.colors.PRIMARY
         self.color = ft.colors.PRIMARY
         self.shape = ft.RoundedRectangleBorder(radius=8)
@@ -116,5 +105,6 @@ class ItemDownloading(ft.Card):
                 color=ft.colors.PRIMARY,
             ),
             trailing=icon_widget,
+            data=self.id,
         )
-        logger.info(f"ItemDownloading criado: {self.title}")
+        logger.info(f"ItemDownloading criado: ID: {self.id}, título: {self.title}")

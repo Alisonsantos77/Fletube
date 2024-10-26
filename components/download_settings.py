@@ -27,7 +27,6 @@ def DownloadSettings(page: ft.Page):
     directory_value = page.client_storage.get("download_directory")
     if directory_value is None:
         directory_value = "Nenhum diretório selecionado!"
-        
 
     directory_text = ft.Text(
         value=directory_value,
@@ -50,16 +49,26 @@ def DownloadSettings(page: ft.Page):
         options=[
             ft.dropdown.Option("mp4", "MP4"),
             ft.dropdown.Option("mkv", "MKV"),
-            ft.dropdown.Option("flv", "FLV"),
             ft.dropdown.Option("webm", "WEBM"),
-            ft.dropdown.Option("avi", "AVI"),
             ft.dropdown.Option("mp3", "MP3"),
-            ft.dropdown.Option("aac", "AAC"),
             ft.dropdown.Option("wav", "WAV"),
             ft.dropdown.Option("m4a", "M4A"),
-            ft.dropdown.Option("opus", "OPUS"),
         ],
         on_change=lambda e: update_default_format(e.control.value),
+    )
+
+    # Monitoramento do Clipboard
+    def toggle_clipboard_monitoring(e):
+        page.client_storage.set("clipboard_monitoring", e.control.value)
+
+    clipboard_monitoring_value = (
+        page.client_storage.get("clipboard_monitoring") or False
+    )
+
+    clipboard_monitor_switch = ft.Switch(
+        label="Monitorar Clipboard para Links",
+        value=clipboard_monitoring_value,
+        on_change=toggle_clipboard_monitoring,
     )
 
     return ft.ResponsiveRow(
@@ -86,6 +95,19 @@ def DownloadSettings(page: ft.Page):
                             weight=ft.FontWeight.BOLD,
                         ),
                         download_format_dropdown,
+                    ],
+                    spacing=5,
+                ),
+                col={"sm": 12, "md": 6},
+            ),
+            ft.Container(
+                content=ft.Column(
+                    [
+                        ft.Text(
+                            "Configurações de Monitoramento",
+                            weight=ft.FontWeight.BOLD,
+                        ),
+                        clipboard_monitor_switch,
                     ],
                     spacing=5,
                 ),

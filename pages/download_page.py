@@ -7,9 +7,6 @@ def DownloadPage(page: ft.Page):
     # Inicialize a sidebar
     sidebar = SidebarList()
 
-    # Adiciona sidebar à página para garantir que esteja renderizada
-    page.add(sidebar)
-
     # Inicialize o conteúdo da página
     content = download_content(page, sidebar)
 

@@ -1,61 +1,52 @@
 import flet as ft
+import logging
+from utils.client_storage_utils import (
+    recuperar_downloads_bem_sucedidos_client,
+    excluir_download_bem_sucedido_client,
+)
 
+logger = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 
 def HistoryPage(page: ft.Page):
-    download_history = [
-        {
-            "title": "Python Tutorial for Beginners",
-            "thumbnail": "https://img.youtube.com/vi/kqtD5dpn9C8/hqdefault.jpg",
-            "date": "2024-10-10",
-            "status": "Concluído",
-            "format": "MP4",
-        },
-        {
-            "title": "Lo-fi Hip Hop Mix",
-            "thumbnail": "https://img.youtube.com/vi/lTRiuFIWV54/hqdefault.jpg",
-            "date": "2024-10-09",
-            "status": "Concluído",
-            "format": "MP3",
-        },
-        {
-            "title": "JavaScript Crash Course",
-            "thumbnail": "https://img.youtube.com/vi/hdI2bqOjy3c/hqdefault.jpg",
-            "date": "2024-10-08",
-            "status": "Falhou",
-            "format": "MKV",
-        },
-    ]
+    download_history = recuperar_downloads_bem_sucedidos_client(page)
 
     def render_download_item(item):
+        item_id = item.get("id")
+        if not item_id:
+            logger.warning(f"Item sem ID encontrado: {item}")
+            return ft.Container()
+
         return ft.Container(
             content=ft.Row(
                 controls=[
                     ft.Image(
-                        src=item["thumbnail"],
+                        src=item.get("thumbnail", "/images/logo.png"),
                         width=100,
                         height=100,
                         fit=ft.ImageFit.CONTAIN,
                     ),
                     ft.Column(
                         controls=[
-                            ft.Text(item["title"], size=18, weight=ft.FontWeight.BOLD),
-                            ft.Text(f"Data: {item['date']}"),
-                            ft.Text(f"Formato: {item['format']}"),
                             ft.Text(
-                                f"Status: {item['status']}",
-                                color=(
-                                    ft.colors.GREEN
-                                    if item["status"] == "Concluído"
-                                    else ft.colors.RED
-                                ),
+                                item.get("title", "Título Indisponível"),
+                                size=18,
+                                weight=ft.FontWeight.BOLD,
+                            ),
+                            ft.Text(
+                                f"Formato: {item.get('format', 'Formato Indisponível')}"
                             ),
                         ],
                         spacing=5,
                     ),
                     ft.IconButton(
                         icon=ft.icons.DELETE_OUTLINE,
-                        on_click=lambda e: delete_item(item),
+                        on_click=lambda e, item_id=item_id: delete_item(e, item_id),
                         tooltip="Excluir do histórico",
                     ),
                 ],
@@ -67,8 +58,19 @@ def HistoryPage(page: ft.Page):
             margin=ft.margin.symmetric(vertical=5),
         )
 
-    def delete_item(item):
-        print(f"Item '{item['title']}' excluído do histórico.")
+    def delete_item(e, item_id):
+        if item_id:
+            excluir_download_bem_sucedido_client(page, item_id)
+            page.snack_bar = ft.SnackBar(
+                content=ft.Text(f"Item excluído do histórico."),
+                bgcolor=ft.colors.PRIMARY_CONTAINER,
+            )
+            page.snack_bar.open = True
+            page.views.clear()
+            page.views.append(HistoryPage(page))
+            page.update()
+        else:
+            logger.error("Tentativa de excluir um item sem ID.")
 
     return ft.Container(
         content=ft.Column(
@@ -76,7 +78,11 @@ def HistoryPage(page: ft.Page):
                 ft.Text("Histórico de Downloads", size=24, weight=ft.FontWeight.BOLD),
                 ft.Divider(height=1, color=ft.colors.OUTLINE),
                 ft.Column(
-                    controls=[render_download_item(item) for item in download_history],
+                    controls=[
+                        render_download_item(item)
+                        for item in download_history
+                        if item.get("id")
+                    ],
                     spacing=10,
                     scroll=ft.ScrollMode.AUTO,
                 ),

@@ -52,8 +52,8 @@ def setup_routes(page: ft.Page):
             page.title = "Histórico - Fletube"
             page.views.append(
                 ft.View(
-                    drawer=create_drawer(page),
                     route="/historico",
+                    drawer=create_drawer(page),
                     appbar=ft.AppBar(
                         bgcolor=ft.colors.TRANSPARENT,
                         actions=[create_user_menu(page)],

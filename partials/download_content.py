@@ -1,43 +1,63 @@
 import flet as ft
 import threading
 import logging
+import re
+import asyncio
+import uuid
+from functools import partial
 from services.dlp_service import start_download
 from utils.session_storage_utils import (
     recuperar_downloads_bem_sucedidos_session,
     salvar_downloads_bem_sucedidos_session,
 )
+from utils.client_storage_utils import salvar_downloads_bem_sucedidos_client
 from utils.file_picker_utils import setup_file_picker
 from utils.extract_thumbnail import extract_thumbnail_url
 from utils.extract_title import extract_title_from_url
+from utils.validations import validar_input
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
-
 logger = logging.getLogger(__name__)
 
 
-def renderizar_lista_downloads_salvos(page, sidebar):
-    # Recupera os downloads salvos no session_storage
-    downloads = recuperar_downloads_bem_sucedidos_session(page)
+async def clipboard_reminder(page, status_text_rf, download_in_progress):
+    seconds = 60
+    while seconds > 0:
+        if not download_in_progress["value"]:
+            if status_text_rf.current is not None:
+                status_text_rf.current.value = f"Copie o link e passe o mouse na tela dentro de {seconds} segundos."
+                status_text_rf.current.update()
+            seconds -= 1
+            await asyncio.sleep(1)
+        else:
+            break
+    else:
+        if not download_in_progress["value"] and status_text_rf.current is not None:
+            status_text_rf.current.value = "Faça o download do seu vídeo aqui!"
+            status_text_rf.current.update()
 
-    # Verifica se a lista de downloads foi recuperada corretamente
+
+def renderizar_lista_downloads_salvos(page, sidebar):
+    downloads = recuperar_downloads_bem_sucedidos_session(page)
     if downloads:
         logger.info(f"Downloads recuperados: {downloads}")
         for download in downloads:
+            download_id = download.get("id")
+            if not download_id:
+                logger.warning(f"Download sem ID encontrado: {download}")
+                continue
             title = download.get("title", "Título Indisponível")
             format = download.get("format", "Formato Indisponível")
             thumbnail = download.get("thumbnail", "/images/logo.png")
-            src = download.get("src", "")
-
             logger.info(
-                f"Adicionando download: Título: {title}, Formato: {format}, Thumbnail: {thumbnail}"
+                f"Adicionando download: ID: {download_id}, Título: {title}, Formato: {format}, Thumbnail: {thumbnail}"
             )
-
-            # Adiciona o item à sidebar
             sidebar.add_download_item(
+                id=download_id,
                 title=title,
                 subtitle=format,
                 thumbnail_url=thumbnail,
@@ -53,6 +73,11 @@ def download_content(page: ft.Page, sidebar):
     download_button_rf = ft.Ref[ft.ElevatedButton]()
     barra_progress_video_rf = ft.Ref[ft.ProgressBar]()
     input_link_rf = ft.Ref[ft.TextField]()
+    dlg_modal_rf = ft.Ref[ft.AlertDialog]()
+
+    download_in_progress = {"value": False}
+    dialog_open = {"value": False}
+    last_clipboard_content = {"value": None}
 
     barra_de_progresso = ft.ProgressBar(
         width=350,
@@ -64,135 +89,194 @@ def download_content(page: ft.Page, sidebar):
     )
 
     def update_thumbnail(e):
-        """
-        Atualiza a imagem de thumbnail com base na URL do vídeo fornecida.
-
-        Args:
-            e: O evento que acionou esta função.
-        """
-        video_url = input_link.value.strip()
-        logger.info(f"Atualizando thumbnail para URL: {video_url}")
+        video_url = input_link_rf.current.value.strip()
+        if not validar_input(page, video_url):
+            input_link_rf.current.value = None
+            input_link_rf.current.update()
+            return
         try:
             thumb_url = extract_thumbnail_url(video_url)
             img_downloader_rf.current.src = thumb_url
             img_downloader_rf.current.update()
             status_text_rf.current.value = "Thumbnail atualizado."
-            status_text_rf.current.color = ft.colors.GREEN
+            status_text_rf.current.color = ft.colors.PRIMARY
             status_text_rf.current.update()
-            logger.info(f"Thumbnail atualizado para: {thumb_url}")
+            snackbar = ft.SnackBar(
+                content=ft.Text("Thumbnail atualizado com sucesso!"),
+                bgcolor=ft.colors.PRIMARY,
+            )
+            page.overlay.append(snackbar)
+            snackbar.open = True
+            page.update()
         except ValueError as ve:
             status_text_rf.current.value = str(ve)
             status_text_rf.current.color = ft.colors.ERROR
             status_text_rf.current.update()
-            logger.error(f"Erro ao extrair thumbnail: {ve}")
+            snackbar = ft.SnackBar(
+                content=ft.Text(str(ve)),
+                bgcolor=ft.colors.ERROR_CONTAINER,
+            )
+            page.overlay.append(snackbar)
+            snackbar.open = True
+            page.update()
 
     def on_directory_selected(directory_path):
         if directory_path:
-            page.session.set("download_directory", directory_path)
+            page.client_storage.set("download_directory", directory_path)
             status_text_rf.current.value = f"Diretório selecionado: {directory_path}"
             status_text_rf.current.color = ft.colors.PRIMARY
             status_text_rf.current.update()
+            snackbar = ft.SnackBar(
+                content=ft.Text(f"Diretório selecionado: {directory_path}"),
+                bgcolor=ft.colors.PRIMARY,
+            )
+            page.overlay.append(snackbar)
+            snackbar.open = True
+            page.update()
 
     def iniciar_download_apos_selecionar_diretorio(diretorio):
-        link = input_link.value.strip()
+        download_in_progress["value"] = True
+        link = input_link_rf.current.value.strip()
         format_dropdown = drop_format_rf.current.value
-        logger.info(f"Formato selecionado pelo usuário: {format_dropdown}")
-        page.session.set("selected_format", format_dropdown)
-
+        page.client_storage.set("selected_format", format_dropdown)
         if link and format_dropdown:
             status_text_rf.current.value = "Iniciando download..."
             status_text_rf.current.color = ft.colors.PRIMARY
             status_text_rf.current.update()
+            snackbar = ft.SnackBar(
+                content=ft.Text("Download iniciado..."),
+                bgcolor=ft.colors.PRIMARY,
+            )
+            page.overlay.append(snackbar)
+            snackbar.open = True
+            page.update()
 
             def progress_hook(d):
-                """
-                Hook de progresso que atualiza a barra de progresso e o texto de status durante o download.
-                Também lida com erros no processo de download.
-                """
                 if d["status"] == "downloading":
                     if "total_bytes" in d and "downloaded_bytes" in d and "eta" in d:
                         progress = d["downloaded_bytes"] / d["total_bytes"]
-
                         download_button_rf.current.disabled = True
                         download_button_rf.current.bgcolor = ft.colors.SECONDARY
                         download_button_rf.current.text = "Aguarde..."
                         download_button_rf.current.update()
 
+                        drop_format_rf.current.disabled = True
+                        drop_format_rf.current.update()
+
                         barra_progress_video_rf.current.value = progress
                         barra_progress_video_rf.current.visible = True
                         barra_progress_video_rf.current.update()
-
                         status_text_rf.current.value = (
                             f"Baixando... {progress*100:.2f}%"
                         )
+
                         status_text_rf.current.color = ft.colors.PRIMARY
                         status_text_rf.current.update()
-
                 elif d["status"] == "finished":
+                    download_in_progress["value"] = False
                     try:
-                        title = extract_title_from_url(link)
-                        thumbnail = extract_thumbnail_url(link)
-                        src = d["filename"]
+                        info_dict = d.get("info_dict", {})
+                        video_id = info_dict.get("id", "")
+                        if not video_id:
+                            video_id = str(uuid.uuid4())
+                            logger.warning(
+                                f"ID não encontrado nos metadados. Gerado ID: {video_id}"
+                            )
+                        title = info_dict.get("title", "Título Indisponível")
+                        thumbnail = info_dict.get("thumbnail", "/images/logo.png")
                         download_data = {
+                            "id": video_id,
                             "title": title,
                             "thumbnail": thumbnail,
                             "format": format_dropdown,
                         }
-
+                        salvar_downloads_bem_sucedidos_client(page, download_data)
                         salvar_downloads_bem_sucedidos_session(page, download_data)
-
                         sidebar.add_download_item(
+                            id=download_data["id"],
                             title=download_data["title"],
                             subtitle=download_data["format"],
                             thumbnail_url=download_data["thumbnail"],
                         )
-
-                        download_button_rf.current.text = "Iniciar download"
+                        download_button_rf.current.text = "Iniciar Download"
                         download_button_rf.current.disabled = False
                         download_button_rf.current.bgcolor = ft.colors.PRIMARY
                         download_button_rf.current.update()
 
-                        status_text_rf.current.value = "Download concluído!"
-                        status_text_rf.current.color = ft.colors.GREEN
-                        status_text_rf.current.update()
+                        drop_format_rf.current.disabled = False
+                        drop_format_rf.current.update()
 
+                        status_text_rf.current.value = "Download concluído!"
+                        status_text_rf.current.color = ft.colors.PRIMARY
+                        status_text_rf.current.update()
                         barra_progress_video_rf.current.value = 1.0
                         barra_progress_video_rf.current.visible = False
                         barra_progress_video_rf.current.update()
-
                         input_link_rf.current.value = None
                         input_link_rf.current.update()
-
+                        img_downloader_rf.current.src = "/images/logo.png"
+                        img_downloader_rf.current.update()
+                        snackbar = ft.SnackBar(
+                            content=ft.Text("Download concluído com sucesso!"),
+                            bgcolor=ft.colors.PRIMARY_CONTAINER,
+                        )
+                        page.overlay.append(snackbar)
+                        snackbar.open = True
+                        page.update()
                     except Exception as e:
-                        logger.error(f"Erro ao processar o download: {e}")
+                        download_in_progress["value"] = False
                         status_text_rf.current.value = "Erro ao processar o download."
                         status_text_rf.current.color = ft.colors.ERROR
                         status_text_rf.current.update()
 
-                        download_button_rf.current.text = "Iniciar download"
+                        drop_format_rf.current.disabled = False
+                        drop_format_rf.current.update()
+
+                        download_button_rf.current.text = "Iniciar Download"
                         download_button_rf.current.disabled = False
                         download_button_rf.current.bgcolor = ft.colors.PRIMARY
                         download_button_rf.current.update()
-
+                        snackbar = ft.SnackBar(
+                            content=ft.Text("Erro ao processar o download."),
+                            bgcolor=ft.colors.ERROR_CONTAINER,
+                        )
+                        page.overlay.append(snackbar)
+                        snackbar.open = True
+                        page.update()
                 elif d["status"] == "error":
+                    download_in_progress["value"] = False
                     status_text_rf.current.value = "Erro no download."
                     status_text_rf.current.color = ft.colors.ERROR
                     status_text_rf.current.update()
-
                     barra_progress_video_rf.current.visible = False
                     barra_progress_video_rf.current.update()
-
-                    download_button_rf.current.text = "Iniciar download"
+                    download_button_rf.current.text = "Iniciar Download"
                     download_button_rf.current.disabled = False
                     download_button_rf.current.bgcolor = ft.colors.PRIMARY
                     download_button_rf.current.update()
+                    snackbar = ft.SnackBar(
+                        content=ft.Text("Erro no download."),
+                        bgcolor=ft.colors.ERROR_CONTAINER,
+                    )
+                    page.overlay.append(snackbar)
+                    snackbar.open = True
+                    page.update()
 
             def download_thread():
                 try:
                     start_download(link, format_dropdown, diretorio, progress_hook)
-                    logger.info(f"Iniciando download com formato: {format_dropdown}")
                 except Exception as e:
-                    logger.error(f"Erro ao iniciar o download: {e}")
+                    download_in_progress["value"] = False
+                    status_text_rf.current.value = "Erro ao iniciar o download."
+                    status_text_rf.current.color = ft.colors.ERROR
+                    status_text_rf.current.update()
+                    snackbar = ft.SnackBar(
+                        content=ft.Text("Erro ao iniciar o download."),
+                        bgcolor=ft.colors.ERROR_CONTAINER,
+                    )
+                    page.overlay.append(snackbar)
+                    snackbar.open = True
+                    page.update()
 
             thread = threading.Thread(target=download_thread, daemon=True)
             thread.start()
@@ -202,10 +286,16 @@ def download_content(page: ft.Page, sidebar):
             )
             status_text_rf.current.color = ft.colors.ERROR
             status_text_rf.current.update()
+            snackbar = ft.SnackBar(
+                content=ft.Text("Por favor, insira um link e escolha um formato."),
+                bgcolor=ft.colors.ERROR_CONTAINER,
+            )
+            page.overlay.append(snackbar)
+            snackbar.open = True
+            page.update()
 
     def start_download_click(e):
         diretorio = page.client_storage.get("download_directory")
-
         if diretorio and diretorio != "Nenhum diretório selecionado!":
             iniciar_download_apos_selecionar_diretorio(diretorio)
         else:
@@ -214,7 +304,86 @@ def download_content(page: ft.Page, sidebar):
             )
             status_text_rf.current.color = ft.colors.ERROR
             status_text_rf.current.update()
+            snackbar = ft.SnackBar(
+                content=ft.Text(
+                    "Nenhum diretório selecionado! Por favor, selecione um diretório."
+                ),
+                bgcolor=ft.colors.ERROR_CONTAINER,
+            )
+            page.overlay.append(snackbar)
+            snackbar.open = True
+            page.update()
             file_picker.get_directory_path()
+
+    def handle_close(e):
+        dialog_open["value"] = False
+        dlg_modal_rf.current.open = False
+        page.update()
+
+    dlg_modal = ft.AlertDialog(
+        title=ft.Text(""),
+        content=ft.Text(""),
+        actions=[
+            ft.TextButton(""),
+            ft.TextButton(""),
+        ],
+        actions_alignment=ft.MainAxisAlignment.END,
+        ref=dlg_modal_rf,
+    )
+    page.overlay.append(dlg_modal)
+
+    def check_clipboard_for_youtube_link(e):
+        clipboard_monitoring = page.client_storage.get("clipboard_monitoring")
+        if not clipboard_monitoring:
+            return
+
+        if download_in_progress["value"] or dialog_open["value"]:
+            return
+        clipboard_content = page.get_clipboard()
+        youtube_link_pattern = r"(https?://)?(www\.)?(youtube\.com|youtu\.be)/\S+"
+        current_input_value = input_link_rf.current.value
+
+        if isinstance(clipboard_content, str) and re.match(
+            youtube_link_pattern, clipboard_content
+        ):
+            if clipboard_content == last_clipboard_content["value"]:
+                logger.info("Conteúdo do clipboard já foi processado anteriormente.")
+                return
+
+            if current_input_value:
+                if clipboard_content != current_input_value:
+                    dialog_open["value"] = True
+                    dlg_modal_rf.current.title.value = "Link Detectado no Clipboard"
+                    dlg_modal_rf.current.content.value = (
+                        "Deseja substituir o link atual pelo do clipboard?"
+                    )
+                    dlg_modal_rf.current.actions = [
+                        ft.TextButton(
+                            "Sim", on_click=lambda e: substituir_link(clipboard_content)
+                        ),
+                        ft.TextButton("Não", on_click=handle_close),
+                    ]
+                    dlg_modal_rf.current.open = True
+                    page.update()
+                else:
+                    logger.info(
+                        "O novo link é igual ao atual. Nenhuma ação necessária."
+                    )
+            else:
+                input_link_rf.current.value = clipboard_content
+                input_link_rf.current.update()
+                update_thumbnail(None)
+
+            last_clipboard_content["value"] = clipboard_content
+
+    def substituir_link(new_link):
+        dialog_open["value"] = False
+        input_link_rf.current.value = new_link
+        input_link_rf.current.update()
+        update_thumbnail(None)
+        dlg_modal_rf.current.open = False
+        page.update()
+        last_clipboard_content["value"] = new_link
 
     file_picker = setup_file_picker(page, on_directory_selected)
 
@@ -237,26 +406,27 @@ def download_content(page: ft.Page, sidebar):
         hint_text="Cole o link do YouTube aqui...",
         prefix_icon=ft.icons.LINK,
         on_change=update_thumbnail,
+        on_focus=check_clipboard_for_youtube_link,
         ref=input_link_rf,
+    )
+
+    format_value = (
+        page.client_storage.get("selected_format")
+        or page.client_storage.get("default_format")
+        or "mp3"
     )
 
     format_dropdown = ft.Dropdown(
         ref=drop_format_rf,
         label="Escolha o formato",
-        value=page.session.get("selected_format")
-        or page.session.get("default_format")
-        or "mp3",
+        value=format_value,
         options=[
             ft.dropdown.Option("mp4", "MP4"),
             ft.dropdown.Option("mkv", "MKV"),
-            ft.dropdown.Option("flv", "FLV"),
             ft.dropdown.Option("webm", "WEBM"),
-            ft.dropdown.Option("avi", "AVI"),
             ft.dropdown.Option("mp3", "MP3"),
-            ft.dropdown.Option("aac", "AAC"),
             ft.dropdown.Option("wav", "WAV"),
             ft.dropdown.Option("m4a", "M4A"),
-            ft.dropdown.Option("opus", "OPUS"),
         ],
     )
 
@@ -281,13 +451,14 @@ def download_content(page: ft.Page, sidebar):
     )
 
     status_text = ft.Text(
-        value="Faça o download do seu vídeo aqui!" ,
+        value="Faça o download do seu vídeo aqui!",
         color=ft.colors.PRIMARY,
         size=16,
         ref=status_text_rf,
     )
 
     container = ft.Container(
+        on_hover=check_clipboard_for_youtube_link,
         content=ft.Column(
             alignment=ft.MainAxisAlignment.CENTER,
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -330,10 +501,20 @@ def download_content(page: ft.Page, sidebar):
                     ],
                 )
             ],
-        )
+        ),
     )
 
-    # Renderizar os downloads já salvos no carregamento
-    renderizar_lista_downloads_salvos(page, sidebar)
+    def on_layout(e):
+        renderizar_lista_downloads_salvos(page, sidebar)
+        start_clipboard_task()
+
+    def start_clipboard_task():
+        clipboard_monitoring = page.client_storage.get("clipboard_monitoring")
+        if clipboard_monitoring:
+            page.run_task(
+                partial(clipboard_reminder, page, status_text_rf, download_in_progress)
+            )
+
+    container.on_layout = on_layout
 
     return container

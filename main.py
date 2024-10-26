@@ -2,6 +2,7 @@ import logging
 import flet as ft
 from routes import setup_routes
 from utils.theme import BlueVibesDarkTheme, BlueVibesLightTheme
+import os
 
 # Configurar logging nativo
 logging.basicConfig(
@@ -24,13 +25,12 @@ def toggle_theme(page: ft.Page, theme_mode: ft.ThemeMode):
         logging.info("Tema: Light")
 
     page.theme_mode = theme_mode
-    page.client_storage.set(
-        "theme_mode", theme_mode.name
-    )  
-    page.update() 
+    page.client_storage.set("theme_mode", theme_mode.name)
+    page.update()
 
 
 def main(page: ft.Page):
+    # page.client_storage.clear()
     logging.info("Fletube iniciado")
 
     # Carregar o tema salvo no client_storage
@@ -79,4 +79,3 @@ def main(page: ft.Page):
 if __name__ == "__main__":
     logging.info("Inicializando Fletube")
     ft.app(target=main, assets_dir="assets")
-    # ft.app(target=main, assets_dir="assets", view=ft.AppView.WEB_BROWSER, port=5354)

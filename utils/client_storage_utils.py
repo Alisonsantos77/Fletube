@@ -1,31 +1,47 @@
 import logging
 import flet as ft
+import uuid
+
 logger = logging.getLogger(__name__)
 
 
-def recuperar_downloads_bem_sucedidos(page: ft.Page):
-    """
-    Recupera a lista de downloads bem-sucedidos armazenados no client_storage.
-
-    :param page: Instância do Flet Page para acesso ao client_storage.
-    :return: Lista de downloads bem-sucedidos ou uma lista vazia se não houver dados.
-    """
-    successful_downloads = page.client_storage.get("fletube.successful_downloads")
-
-    # Se for uma string (por algum erro anterior), converte para lista
-    if isinstance(successful_downloads, str):
+def salvar_downloads_bem_sucedidos_client(page: ft.Page, download_data: dict):
+    downloads = page.client_storage.get("successful_downloads") or []
+    if isinstance(downloads, str):
         try:
-            successful_downloads = eval(
-                successful_downloads
-            )  # Converte a string para lista
-            logger.info("Downloads convertidos de string para lista.")
+            downloads = eval(downloads)
         except Exception as e:
-            logger.error(f"Erro ao converter downloads para lista: {e}")
-            successful_downloads = []
+            logger.error(f"Erro ao avaliar downloads do client_storage: {e}")
+            downloads = []
 
-    # Se não houver dados ou a lista for None, inicializa uma lista vazia
-    if successful_downloads is None:
-        successful_downloads = []
+    existing_ids = [d.get("id") for d in downloads]
+    if download_data["id"] not in existing_ids:
+        downloads.append(download_data)
+        page.client_storage.set("successful_downloads", downloads)
+        logger.info(f"Download salvo no client_storage: {download_data}")
+    else:
+        logger.info("Download já existe no client_storage.")
 
-    # Retorna a lista de downloads bem-sucedidos
-    return successful_downloads
+
+def recuperar_downloads_bem_sucedidos_client(page: ft.Page):
+    downloads = page.client_storage.get("successful_downloads") or []
+    if isinstance(downloads, str):
+        try:
+            downloads = eval(downloads)
+        except Exception as e:
+            logger.error(f"Erro ao avaliar downloads do client_storage: {e}")
+            downloads = []
+    # Adiciona IDs únicos a itens que não possuem
+    for download in downloads:
+        if "id" not in download or not download["id"]:
+            download["id"] = str(uuid.uuid4())
+            logger.info(f"ID adicionado ao download: {download}")
+    page.client_storage.set("successful_downloads", downloads)
+    return downloads
+
+
+def excluir_download_bem_sucedido_client(page: ft.Page, download_id: str):
+    downloads = recuperar_downloads_bem_sucedidos_client(page)
+    downloads = [d for d in downloads if d.get("id") != download_id]
+    page.client_storage.set("successful_downloads", downloads)
+    logger.info(f"Download com ID {download_id} excluído do client_storage.")

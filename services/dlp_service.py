@@ -41,13 +41,16 @@ def start_download(link, format, diretorio, progress_hook):
     logger.info("Iniciando start_download")
 
     ydl_opts = {
-            'format': f'bestvideo+bestaudio/best',
-            'outtmpl': f'{diretorio}/%(title)s.%(ext)s',
-            'progress_hooks': [progress_hook],
-            # Adicione outras opções conforme necessário
-        }
+        "format": f"bestvideo+bestaudio/best",
+        "outtmpl": f"{diretorio}/%(title)s.%(ext)s",
+        "progress_hooks": [progress_hook],
+    }
     # Ajusta as opções de formato com base no formato selecionado
-    if format in ["mp3", "aac", "wav", "m4a", "opus"]:
+    if format in [
+        "mp3",
+        "wav",
+        "m4a",
+    ]:
         logger.info(f"Formatos de áudio selecionados: {format}")
         ydl_opts.update(
             {
@@ -61,7 +64,11 @@ def start_download(link, format, diretorio, progress_hook):
                 ],
             }
         )
-    elif format in ["mp4", "mkv", "flv", "webm", "avi"]:
+    elif format in [
+        "mp4",
+        "mkv",
+        "webm",
+    ]:
         logger.info(f"Formatos de vídeo selecionados: {format}")
         ydl_opts.update(
             {
@@ -76,7 +83,8 @@ def start_download(link, format, diretorio, progress_hook):
     logger.debug(f"ydl_opts configurados: {ydl_opts}")
 
     try:
-        download_with_ydl(ydl_opts, link)
+        with YoutubeDL(ydl_opts) as ydl:
+            ydl.download([link])
     except Exception as e:
-        logger.error("Erro ao iniciar o download: %s", str(e))
+        logger.error("Erro ao iniciar o download da playlist: %s", str(e))
         raise e
