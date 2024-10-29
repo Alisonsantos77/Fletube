@@ -4,6 +4,7 @@ import logging
 import re
 import asyncio
 import uuid
+import time
 from functools import partial
 from services.dlp_service import start_download
 from utils.session_storage_utils import (
@@ -15,6 +16,7 @@ from utils.file_picker_utils import setup_file_picker
 from utils.extract_thumbnail import extract_thumbnail_url
 from utils.extract_title import extract_title_from_url
 from utils.validations import validar_input
+import os
 
 logging.basicConfig(
     level=logging.INFO,
@@ -53,14 +55,16 @@ def renderizar_lista_downloads_salvos(page, sidebar):
             title = download.get("title", "Título Indisponível")
             format = download.get("format", "Formato Indisponível")
             thumbnail = download.get("thumbnail", "/images/logo.png")
+            file_path = download.get("file_path", "")
             logger.info(
-                f"Adicionando download: ID: {download_id}, Título: {title}, Formato: {format}, Thumbnail: {thumbnail}"
+                f"Adicionando download: ID: {download_id}, Título: {title}, Formato: {format}, Thumbnail: {thumbnail}, Caminho: {file_path}"
             )
             sidebar.add_download_item(
                 id=download_id,
                 title=title,
                 subtitle=format,
                 thumbnail_url=thumbnail,
+                file_path=file_path,
             )
     else:
         logger.warning("Nenhum download recuperado do session_storage.")
@@ -78,6 +82,7 @@ def download_content(page: ft.Page, sidebar):
     download_in_progress = {"value": False}
     dialog_open = {"value": False}
     last_clipboard_content = {"value": None}
+    download_states = {}
 
     barra_de_progresso = ft.ProgressBar(
         width=350,
@@ -95,16 +100,29 @@ def download_content(page: ft.Page, sidebar):
             input_link_rf.current.update()
             return
         try:
+            status_text_rf.current.value = "Extraindo thumbnail..."
+            barra_progress_video_rf.current.value = 0.5
+            barra_progress_video_rf.current.visible = True
+            barra_progress_video_rf.current.update()
+
             thumb_url = extract_thumbnail_url(video_url)
             img_downloader_rf.current.src = thumb_url
             img_downloader_rf.current.update()
-            status_text_rf.current.value = "Thumbnail atualizado."
+
+            status_text_rf.current.value = "Thumbnail atualizada."
             status_text_rf.current.color = ft.colors.PRIMARY
             status_text_rf.current.update()
+
+            barra_progress_video_rf.current.value = 1.0
+            barra_progress_video_rf.current.visible = False
+            barra_progress_video_rf.current.update()
+
             snackbar = ft.SnackBar(
-                content=ft.Text("Thumbnail atualizado com sucesso!"),
+                content=ft.Text("Thumbnail atualizada com sucesso!"),
                 bgcolor=ft.colors.PRIMARY,
+                action="OK",
             )
+            snackbar.on_action = lambda e: None
             page.overlay.append(snackbar)
             snackbar.open = True
             page.update()
@@ -112,10 +130,17 @@ def download_content(page: ft.Page, sidebar):
             status_text_rf.current.value = str(ve)
             status_text_rf.current.color = ft.colors.ERROR
             status_text_rf.current.update()
+
+            barra_progress_video_rf.current.value = 1.0
+            barra_progress_video_rf.current.visible = False
+            barra_progress_video_rf.current.update()
+
             snackbar = ft.SnackBar(
                 content=ft.Text(str(ve)),
-                bgcolor=ft.colors.ERROR_CONTAINER,
+                bgcolor=ft.colors.ERROR,
+                action="OK",
             )
+            snackbar.on_action = lambda e: None
             page.overlay.append(snackbar)
             snackbar.open = True
             page.update()
@@ -129,7 +154,9 @@ def download_content(page: ft.Page, sidebar):
             snackbar = ft.SnackBar(
                 content=ft.Text(f"Diretório selecionado: {directory_path}"),
                 bgcolor=ft.colors.PRIMARY,
+                action="OK",
             )
+            snackbar.on_action = lambda e: None
             page.overlay.append(snackbar)
             snackbar.open = True
             page.update()
@@ -146,34 +173,36 @@ def download_content(page: ft.Page, sidebar):
             snackbar = ft.SnackBar(
                 content=ft.Text("Download iniciado..."),
                 bgcolor=ft.colors.PRIMARY,
+                action="OK",
             )
+            snackbar.on_action = lambda e: None
             page.overlay.append(snackbar)
             snackbar.open = True
             page.update()
 
+            input_link_rf.current.disabled = True
+            input_link_rf.current.update()
+            drop_format_rf.current.disabled = True
+            drop_format_rf.current.update()
+            download_button_rf.current.disabled = True
+            download_button_rf.current.update()
+
+            barra_progress_video_rf.current.value = 0.0
+            barra_progress_video_rf.current.visible = True
+            barra_progress_video_rf.current.update()
+
             def progress_hook(d):
                 if d["status"] == "downloading":
-                    if "total_bytes" in d and "downloaded_bytes" in d and "eta" in d:
+                    if "total_bytes" in d and "downloaded_bytes" in d:
                         progress = d["downloaded_bytes"] / d["total_bytes"]
-                        download_button_rf.current.disabled = True
-                        download_button_rf.current.bgcolor = ft.colors.SECONDARY
-                        download_button_rf.current.text = "Aguarde..."
-                        download_button_rf.current.update()
-
-                        drop_format_rf.current.disabled = True
-                        drop_format_rf.current.update()
-
                         barra_progress_video_rf.current.value = progress
-                        barra_progress_video_rf.current.visible = True
                         barra_progress_video_rf.current.update()
                         status_text_rf.current.value = (
                             f"Baixando... {progress*100:.2f}%"
                         )
-
                         status_text_rf.current.color = ft.colors.PRIMARY
                         status_text_rf.current.update()
                 elif d["status"] == "finished":
-                    download_in_progress["value"] = False
                     try:
                         info_dict = d.get("info_dict", {})
                         video_id = info_dict.get("id", "")
@@ -184,62 +213,113 @@ def download_content(page: ft.Page, sidebar):
                             )
                         title = info_dict.get("title", "Título Indisponível")
                         thumbnail = info_dict.get("thumbnail", "/images/logo.png")
+                        file_path = d.get("filename", "")
+                        format_selected = format_dropdown
                         download_data = {
                             "id": video_id,
                             "title": title,
                             "thumbnail": thumbnail,
-                            "format": format_dropdown,
+                            "format": format_selected,
+                            "file_path": file_path,
                         }
                         salvar_downloads_bem_sucedidos_client(page, download_data)
                         salvar_downloads_bem_sucedidos_session(page, download_data)
-                        sidebar.add_download_item(
-                            id=download_data["id"],
-                            title=download_data["title"],
-                            subtitle=download_data["format"],
-                            thumbnail_url=download_data["thumbnail"],
+
+                        if video_id not in sidebar.items:
+                            sidebar.add_download_item(
+                                id=download_data["id"],
+                                title=download_data["title"],
+                                subtitle=download_data["format"],
+                                thumbnail_url=download_data["thumbnail"],
+                                file_path=download_data["file_path"],
+                            )
+
+                        download_in_progress["value"] = False
+                        status_text_rf.current.value = (
+                            "Download concluído! Iniciando conversão..."
                         )
-                        download_button_rf.current.text = "Iniciar Download"
-                        download_button_rf.current.disabled = False
-                        download_button_rf.current.bgcolor = ft.colors.PRIMARY
-                        download_button_rf.current.update()
-
-                        drop_format_rf.current.disabled = False
-                        drop_format_rf.current.update()
-
-                        status_text_rf.current.value = "Download concluído!"
                         status_text_rf.current.color = ft.colors.PRIMARY
                         status_text_rf.current.update()
-                        barra_progress_video_rf.current.value = 1.0
-                        barra_progress_video_rf.current.visible = False
+
+                        status_text_rf.current.value = "Convertendo arquivo..."
+                        status_text_rf.current.update()
+
+                        barra_progress_video_rf.current.value = 0.0
+                        barra_progress_video_rf.current.visible = True
                         barra_progress_video_rf.current.update()
-                        input_link_rf.current.value = None
-                        input_link_rf.current.update()
-                        img_downloader_rf.current.src = "/images/logo.png"
-                        img_downloader_rf.current.update()
-                        snackbar = ft.SnackBar(
-                            content=ft.Text("Download concluído com sucesso!"),
-                            bgcolor=ft.colors.PRIMARY_CONTAINER,
+
+                        def conversion_hook():
+                            try:
+                                for i in range(1, 11):
+                                    barra_progress_video_rf.current.value = i * 0.1
+                                    barra_progress_video_rf.current.update()
+                                    status_text_rf.current.value = (
+                                        f"Convertendo arquivo... {i*10}%"
+                                    )
+                                    status_text_rf.current.update()
+                                    time.sleep(0.2)
+                                barra_progress_video_rf.current.visible = False
+                                barra_progress_video_rf.current.update()
+                                status_text_rf.current.value = "Conversão concluída!"
+                                status_text_rf.current.color = (
+                                    ft.colors.SURFACE_CONTAINER_HIGHEST
+                                )
+                                status_text_rf.current.update()
+
+                                input_link_rf.current.disabled = False
+                                input_link_rf.current.update()
+                                drop_format_rf.current.disabled = False
+                                drop_format_rf.current.update()
+                                download_button_rf.current.disabled = False
+                                download_button_rf.current.text = "Iniciar Download"
+                                download_button_rf.current.update()
+
+                                input_link_rf.current.value = ""
+                                input_link_rf.current.update()
+                                img_downloader_rf.current.src = "/images/logo.png"
+                                img_downloader_rf.current.update()
+
+                                snackbar = ft.SnackBar(
+                                    content=ft.Text(
+                                        "Download e conversão concluídos com sucesso!"
+                                    ),
+                                    bgcolor=ft.colors.ON_PRIMARY_CONTAINER,
+                                    action="OK",
+                                )
+                                snackbar.on_action = lambda e: None
+                                page.overlay.append(snackbar)
+                                snackbar.open = True
+                                page.update()
+                            except Exception as e:
+                                logger.error(f"Erro durante a conversão: {e}")
+
+                        conversion_thread = threading.Thread(
+                            target=conversion_hook, daemon=True
                         )
-                        page.overlay.append(snackbar)
-                        snackbar.open = True
-                        page.update()
+                        conversion_thread.start()
+
                     except Exception as e:
+                        logger.error(f"Exception during processing download: {e}")
                         download_in_progress["value"] = False
                         status_text_rf.current.value = "Erro ao processar o download."
                         status_text_rf.current.color = ft.colors.ERROR
                         status_text_rf.current.update()
 
+                        input_link_rf.current.disabled = False
+                        input_link_rf.current.update()
                         drop_format_rf.current.disabled = False
                         drop_format_rf.current.update()
-
                         download_button_rf.current.text = "Iniciar Download"
                         download_button_rf.current.disabled = False
                         download_button_rf.current.bgcolor = ft.colors.PRIMARY
                         download_button_rf.current.update()
+
                         snackbar = ft.SnackBar(
                             content=ft.Text("Erro ao processar o download."),
-                            bgcolor=ft.colors.ERROR_CONTAINER,
+                            bgcolor=ft.colors.ERROR,
+                            action="OK",
                         )
+                        snackbar.on_action = lambda e: None
                         page.overlay.append(snackbar)
                         snackbar.open = True
                         page.update()
@@ -256,8 +336,10 @@ def download_content(page: ft.Page, sidebar):
                     download_button_rf.current.update()
                     snackbar = ft.SnackBar(
                         content=ft.Text("Erro no download."),
-                        bgcolor=ft.colors.ERROR_CONTAINER,
+                        bgcolor=ft.colors.ERROR,
+                        action="OK",
                     )
+                    snackbar.on_action = lambda e: None
                     page.overlay.append(snackbar)
                     snackbar.open = True
                     page.update()
@@ -266,14 +348,17 @@ def download_content(page: ft.Page, sidebar):
                 try:
                     start_download(link, format_dropdown, diretorio, progress_hook)
                 except Exception as e:
+                    logger.error(f"Erro ao iniciar o download: {e}")
                     download_in_progress["value"] = False
                     status_text_rf.current.value = "Erro ao iniciar o download."
                     status_text_rf.current.color = ft.colors.ERROR
                     status_text_rf.current.update()
                     snackbar = ft.SnackBar(
                         content=ft.Text("Erro ao iniciar o download."),
-                        bgcolor=ft.colors.ERROR_CONTAINER,
+                        bgcolor=ft.colors.ERROR,
+                        action="OK",
                     )
+                    snackbar.on_action = lambda e: None
                     page.overlay.append(snackbar)
                     snackbar.open = True
                     page.update()
@@ -288,8 +373,10 @@ def download_content(page: ft.Page, sidebar):
             status_text_rf.current.update()
             snackbar = ft.SnackBar(
                 content=ft.Text("Por favor, insira um link e escolha um formato."),
-                bgcolor=ft.colors.ERROR_CONTAINER,
+                bgcolor=ft.colors.ERROR,
+                action="OK",
             )
+            snackbar.on_action = lambda e: None
             page.overlay.append(snackbar)
             snackbar.open = True
             page.update()
@@ -308,8 +395,10 @@ def download_content(page: ft.Page, sidebar):
                 content=ft.Text(
                     "Nenhum diretório selecionado! Por favor, selecione um diretório."
                 ),
-                bgcolor=ft.colors.ERROR_CONTAINER,
+                bgcolor=ft.colors.ERROR,
+                action="OK",
             )
+            snackbar.on_action = lambda e: None
             page.overlay.append(snackbar)
             snackbar.open = True
             page.update()
@@ -398,7 +487,7 @@ def download_content(page: ft.Page, sidebar):
 
     input_link = ft.TextField(
         label="Digite o link do vídeo",
-        width=100,
+        width=400,
         focused_border_color=ft.colors.ON_BACKGROUND,
         focused_bgcolor=ft.colors.SECONDARY,
         cursor_color=ft.colors.ON_SURFACE,
@@ -428,6 +517,7 @@ def download_content(page: ft.Page, sidebar):
             ft.dropdown.Option("wav", "WAV"),
             ft.dropdown.Option("m4a", "M4A"),
         ],
+        disabled=False,
     )
 
     download_button = ft.ElevatedButton(
@@ -436,7 +526,7 @@ def download_content(page: ft.Page, sidebar):
         style=ft.ButtonStyle(
             bgcolor={
                 ft.ControlState.DEFAULT: ft.colors.PRIMARY,
-                ft.ControlState.HOVERED: ft.colors.SECONDARY,
+                ft.ControlState.HOVERED: ft.colors.ON_PRIMARY_CONTAINER,
             },
             color={
                 ft.ControlState.DEFAULT: ft.colors.ON_PRIMARY,
@@ -453,8 +543,9 @@ def download_content(page: ft.Page, sidebar):
     status_text = ft.Text(
         value="Faça o download do seu vídeo aqui!",
         color=ft.colors.PRIMARY,
-        size=16,
+        size=18,
         ref=status_text_rf,
+        weight=ft.FontWeight.BOLD,
     )
 
     container = ft.Container(
@@ -471,6 +562,12 @@ def download_content(page: ft.Page, sidebar):
                             img_downloader,
                             padding=5,
                             col={"sm": 6, "md": 4, "xl": 12},
+                        ),
+                        ft.Container(
+                            status_text,
+                            padding=5,
+                            col={"sm": 6, "md": 4, "xl": 10},
+                            alignment=ft.alignment.center,
                         ),
                         ft.Container(
                             barra_de_progresso,
@@ -492,12 +589,6 @@ def download_content(page: ft.Page, sidebar):
                             padding=5,
                             col={"sm": 6, "md": 4, "xl": 10},
                         ),
-                        ft.Container(
-                            status_text,
-                            padding=5,
-                            col={"sm": 6, "md": 4, "xl": 10},
-                            alignment=ft.alignment.center,
-                        ),
                     ],
                 )
             ],
@@ -511,7 +602,7 @@ def download_content(page: ft.Page, sidebar):
     def start_clipboard_task():
         clipboard_monitoring = page.client_storage.get("clipboard_monitoring")
         if clipboard_monitoring:
-            page.run_task(
+            page.run_async_task(
                 partial(clipboard_reminder, page, status_text_rf, download_in_progress)
             )
 

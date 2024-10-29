@@ -5,54 +5,34 @@ def AppearanceSettings(page: ft.Page):
     theme_switch_ref = ft.Ref[ft.Switch]()
     font_dropdown_ref = ft.Ref[ft.Dropdown]()
 
-    def load_custom_fonts():
-        page.fonts = {
-            "Kanit": "/fonts/Kanit.ttf",
-            "Open Sans": "/fonts/OpenSans.ttf",
-            "BradBunR": "/fonts/BradBunR.ttf",
-            "Heathergreen": "/fonts/Heathergreen.otf",
-            "Ashemark": "/fonts/Ashemark regular.otf",
-            "EmOne-SemiBold": "/fonts/EmOne-SemiBold.otf",
-            "Gadner": "/fonts/Gadner.ttf",
-        }
-        page.update()
+    # Obter o tema salvo ou padrão para LIGHT
+    theme_mode_value = page.client_storage.get("theme_mode") or "LIGHT"
+    is_dark_theme = theme_mode_value == "DARK"
+    page.theme_mode = ft.ThemeMode.DARK if is_dark_theme else ft.ThemeMode.LIGHT
 
-    load_custom_fonts()
-
-    # Verificar e aplica o tema salvo no client_storage ao carregar a página
-    dark_theme_value = page.client_storage.get("dark_theme")
-    if dark_theme_value is None:
-        dark_theme_value = False
-    else:
-        page.theme_mode = ft.ThemeMode.DARK if dark_theme_value else ft.ThemeMode.LIGHT
-        page.update()
-
+    # Switch para alternar tema
     theme_switch = ft.Switch(
         label="Tema Escuro",
         ref=theme_switch_ref,
-        value=dark_theme_value,
+        value=is_dark_theme,
         on_change=lambda e: toggle_theme(e.control.value),
     )
 
     def toggle_theme(is_dark):
-        page.theme_mode = ft.ThemeMode.DARK if is_dark else ft.ThemeMode.LIGHT
-        page.client_storage.set(
-            "dark_theme", is_dark
-        )
+        new_theme_mode = ft.ThemeMode.DARK if is_dark else ft.ThemeMode.LIGHT
+        page.theme_mode = new_theme_mode
+        page.client_storage.set("theme_mode", new_theme_mode.name)
         page.update()
 
     def update_font_family(font_family):
-        page.client_storage.set(
-            "font_family", font_family
-        ) 
-        if font_family == "Padrão":
-            page.theme = ft.Theme() 
-        else:
-            page.theme = ft.Theme(
-                font_family=font_family
-            ) 
+        page.client_storage.set("font_family", font_family)
+        page.theme = (
+            ft.Theme(font_family=font_family) if font_family != "Padrão" else ft.Theme()
+        )
         page.update()
 
+    # Carregar e aplicar o valor da fonte salva
+    font_family_value = page.client_storage.get("font_family") or "Padrão"
     font_options = [
         "Padrão",
         "Kanit",
@@ -64,13 +44,6 @@ def AppearanceSettings(page: ft.Page):
         "Gadner",
     ]
 
-    # Obter o valor da fonte da aplicação e definir o valor padrão se necessário
-    font_family_value = page.client_storage.get("font_family")
-    if font_family_value is None:
-        font_family_value = "Padrão"
-    else:
-        update_font_family(font_family_value)
-
     font_dropdown = ft.Dropdown(
         ref=font_dropdown_ref,
         label="Fonte da Aplicação",
@@ -81,14 +54,8 @@ def AppearanceSettings(page: ft.Page):
 
     return ft.ResponsiveRow(
         [
-            ft.Container(
-                content=theme_switch,
-                col={"sm": 12, "md": 6},
-            ),
-            ft.Container(
-                content=font_dropdown,
-                col={"sm": 12, "md": 6},
-            ),
+            ft.Container(content=theme_switch, col={"sm": 12, "md": 6}),
+            ft.Container(content=font_dropdown, col={"sm": 12, "md": 6}),
         ],
         run_spacing=10,
     )

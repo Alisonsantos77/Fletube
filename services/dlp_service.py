@@ -44,6 +44,8 @@ def start_download(link, format, diretorio, progress_hook):
         "format": f"bestvideo+bestaudio/best",
         "outtmpl": f"{diretorio}/%(title)s.%(ext)s",
         "progress_hooks": [progress_hook],
+        "noplaylist": False,  # Permite o download de playlists
+        "ignoreerrors": True,  # Continua mesmo se houver erros em alguns vídeos
     }
     # Ajusta as opções de formato com base no formato selecionado
     if format in [

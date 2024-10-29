@@ -1,81 +1,95 @@
 import logging
 import flet as ft
 from routes import setup_routes
-from utils.theme import BlueVibesDarkTheme, BlueVibesLightTheme
 import os
-
-# Configurar logging nativo
+# Configuração de logging
 logging.basicConfig(
-    filename="logs/app.log",  # Arquivo onde os logs serão armazenados
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    level=logging.INFO,  # Nível de log (INFO ou DEBUG, conforme necessidade)
+    filename="logs/app.log",
+    format="%(asctime)s %(levelname)s: %(message)s",
+    level=logging.INFO,
 )
 logging.getLogger("flet_core").setLevel(logging.INFO)
 
 
-def toggle_theme(page: ft.Page, theme_mode: ft.ThemeMode):
-    """
-    Alterna o tema da aplicação e salva a escolha no client storage.
-    """
-    if theme_mode == ft.ThemeMode.DARK:
-        page.theme = BlueVibesDarkTheme()
-        logging.info("Tema: Dark")
-    else:
-        page.theme = BlueVibesLightTheme()
-        logging.info("Tema: Light")
+def apply_saved_theme_and_font(page: ft.Page):
+    # Carregar e aplicar o tema salvo no client_storage
+    theme_mode_value = page.client_storage.get("theme_mode") or "LIGHT"
+    page.theme_mode = (
+        ft.ThemeMode.DARK if theme_mode_value == "DARK" else ft.ThemeMode.LIGHT
+    )
+    logging.info(f"Tema carregado: {page.theme_mode}")
 
-    page.theme_mode = theme_mode
-    page.client_storage.set("theme_mode", theme_mode.name)
+    # Carregar e aplicar a fonte salva no client_storage
+    font_family_value = page.client_storage.get("font_family") or "Padrão"
+    page.fonts = {
+        "Kanit": "/fonts/Kanit.ttf",
+        "Open Sans": "/fonts/OpenSans.ttf",
+        "BradBunR": "/fonts/BradBunR.ttf",
+        "Heathergreen": "/fonts/Heathergreen.otf",
+        "Ashemark": "/fonts/Ashemark regular.otf",
+        "EmOne-SemiBold": "/fonts/EmOne-SemiBold.otf",
+        "Gadner": "/fonts/Gadner.ttf",
+    }
+    page.theme = (
+        ft.Theme(font_family=font_family_value)
+        if font_family_value != "Padrão"
+        else ft.Theme()
+    )
+    logging.info(f"Fonte carregada: {font_family_value}")
+
+    # Forçar atualização para aplicar tema e fonte
     page.update()
 
+valores_venv = [
+    os.getenv("SUPABASE_URL"),
+    os.getenv("SUPABASE_KEY"),
+]
 
 def main(page: ft.Page):
-    # page.client_storage.clear()
-    logging.info("Fletube iniciado")
+    logging.info("Iniciando Fletube")
+    print(valores_venv)
 
-    # Carregar o tema salvo no client_storage
-    dark_theme_value = page.client_storage.get("dark_theme")
-    if dark_theme_value is not None:
-        theme_mode = ft.ThemeMode.DARK if dark_theme_value else ft.ThemeMode.LIGHT
-        toggle_theme(page, theme_mode)
-    else:
-        toggle_theme(page, ft.ThemeMode.LIGHT)
+    # Carregar e aplicar tema e fonte salvos antes de configurar a interface
+    apply_saved_theme_and_font(page)
 
-    # Carregar a fonte salva no client_storage
-    font_family_value = page.client_storage.get("font_family")
-    if font_family_value is not None:
-        page.fonts = {
-            "Kanit": "/fonts/Kanit.ttf",
-            "Open Sans": "/fonts/OpenSans.ttf",
-            "BradBunR": "/fonts/BradBunR.ttf",
-            "Heathergreen": "/fonts/Heathergreen.otf",
-            "Ashemark": "/fonts/Ashemark regular.otf",
-            "EmOne-SemiBold": "/fonts/EmOne-SemiBold.otf",
-            "Gadner": "/fonts/Gadner.ttf",
-        }
-        page.theme = ft.Theme(font_family=font_family_value)
-        page.update()
-
+    # Configuração do título da página
     page.title = "Fletube"
 
-    # Gerenciar eventos de teclado
+    # Configuração de rotas
+    setup_routes(page)
+
+    # Função para alternar tema
+    def alternar_tema(e):
+        current_theme = page.client_storage.get("theme_mode") or "LIGHT"
+        new_theme_mode = (
+            ft.ThemeMode.LIGHT if current_theme == "DARK" else ft.ThemeMode.DARK
+        )
+        page.theme_mode = new_theme_mode
+        page.client_storage.set("theme_mode", new_theme_mode.name)
+        page.update()
+
+    # Configurar evento de teclado para atalhos de navegação
     def on_key_event(e: ft.KeyboardEvent):
-        logging.info(f"Tecla: {e.key}")
-        if e.key == "F1":
-            page.go("/")
+        logging.info(f"Tecla pressionada: {e.key}")
+        if e.key.lower() == "t":
+            alternar_tema(None)
+        elif e.key == "F1":
+            page.go("/home")
         elif e.key == "F2":
-            page.go("/downloads")
+            page.go("/questions")
         elif e.key == "F3":
-            page.go("/historico")
+            page.go("/about")
         elif e.key == "F4":
-            page.go("/configuracoes")
+            page.go("/score")
+        elif e.key == "F5":
+            page.go("/quiz")
 
     page.on_keyboard_event = on_key_event
 
-    setup_routes(page)
+    # Atualizar a página final após todas as configurações
     page.update()
 
 
 if __name__ == "__main__":
-    logging.info("Inicializando Fletube")
+    logging.info("Inicializando aplicação Fletube")
     ft.app(target=main, assets_dir="assets")

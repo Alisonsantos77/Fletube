@@ -24,17 +24,6 @@ def setup_routes(page: ft.Page):
     def route_change(route):
         print(f"Rota alterada para: {route}")
         page.views.clear()
-        # page.title = "Fletube"
-        # page.views.append(
-        #     ft.View(
-        #         route="/",
-        #         drawer=create_drawer(page),
-        #         vertical_alignment=ft.MainAxisAlignment.CENTER,
-        #         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-        #         controls=[LoginPage(page)],
-        #     )
-        # )
-
         page.title = "Downloads - Fletube"
         page.views.append(
             ft.View(
@@ -52,8 +41,8 @@ def setup_routes(page: ft.Page):
             page.title = "Histórico - Fletube"
             page.views.append(
                 ft.View(
-                    route="/historico",
                     drawer=create_drawer(page),
+                    route="/historico",
                     appbar=ft.AppBar(
                         bgcolor=ft.colors.TRANSPARENT,
                         actions=[create_user_menu(page)],
@@ -83,12 +72,13 @@ def setup_routes(page: ft.Page):
                 ft.View(
                     route="/feedback",
                     drawer=create_drawer(page),
+                    vertical_alignment=ft.MainAxisAlignment.CENTER,
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     appbar=ft.AppBar(
                         bgcolor=ft.colors.TRANSPARENT,
                         actions=[create_user_menu(page)],
                     ),
                     controls=[FeedbackPage(page)],
-                    scroll=ft.ScrollMode.AUTO,
                 )
             )
         elif route == "/404":

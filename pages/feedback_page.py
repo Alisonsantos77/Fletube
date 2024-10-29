@@ -1,201 +1,345 @@
+# feedback_page.py
+
 import flet as ft
 import logging
 import os
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+import re
+import requests
 
-# Configurar logging
+from services.send_feedback import send_feedback_email
+
+# Configuração de logging
 logging.basicConfig(
+    filename="logs/app.log",
+    format="%(asctime)s %(levelname)s: %(message)s",
     level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
 )
+logging.getLogger("flet_core").setLevel(logging.INFO)  # Log para flet_core
 
 logger = logging.getLogger(__name__)
+
+# Variáveis de ambiente
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+FEEDBACK_RECIPIENT_EMAIL = os.getenv(
+    "FEEDBACK_RECIPIENT_EMAIL", "your_email@example.com"
+)
 
 
 def FeedbackPage(page: ft.Page):
     """
-    Página de feedback com um sistema de avaliação por estrelas e opções de categorias de feedback.
+    Página de feedback com sistema de avaliação em etapas.
     """
 
-    # Referências para os campos e botões
-    feedback_input_ref = ft.Ref[ft.TextField]()
-    selected_rating_ref = 0
+    # Variável mutável para rastrear a etapa atual
+    current_step = [0]
+    user_data = {}
 
-    # Lista para armazenar as referências das estrelas
+    def next_step(e):
+        logger.info(
+            f"Tentando avançar para a próxima etapa a partir da etapa {current_step[0]}"
+        )
+        if validate_current_step():
+            current_step[0] += 1
+            update_view()
+            logger.info(f"Avançou para a etapa {current_step[0]}")
+        else:
+            logger.warning("Validação falhou na etapa atual.")
+
+    def previous_step(e):
+        logger.info(f"Tentando voltar da etapa {current_step[0]}")
+        if current_step[0] > 0:
+            current_step[0] -= 1
+            update_view()
+            logger.info(f"Retrocedeu para a etapa {current_step[0]}")
+        else:
+            logger.info("Já está na primeira etapa; não é possível voltar.")
+
+    def update_view():
+        for index, view in enumerate(steps_views):
+            view.visible = index == current_step[0]
+        if current_step[0] == 4:
+            update_review()
+        page.update()
+        logger.info(f"View atualizada para a etapa {current_step[0]}")
+
+    def validate_current_step():
+        if current_step[0] == 0:
+            email = email_input.value.strip()
+            if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+                email_input.error_text = "Por favor, insira um e-mail válido."
+                email_input.update()
+                logger.warning("E-mail inválido inserido.")
+                return False
+            else:
+                email_input.error_text = None
+                user_data["email"] = email
+                logger.info(f"E-mail validado: {email}")
+                return True
+        elif current_step[0] == 1:
+            if selected_rating[0] == 0:
+                rating_error.value = "Por favor, selecione uma avaliação."
+                rating_error.update()
+                logger.warning("Nenhuma avaliação selecionada.")
+                return False
+            else:
+                rating_error.value = ""
+                user_data["rating"] = selected_rating[0]
+                logger.info(f"Avaliação selecionada: {selected_rating[0]}")
+                return True
+        elif current_step[0] == 2:
+            user_data["category"] = category_radio_group.value
+            user_data["subcategory"] = subcategory_radio_group.value
+            logger.info(f"Categoria selecionada: {user_data['category']}")
+            logger.info(f"Subcategoria selecionada: {user_data['subcategory']}")
+            return True
+        elif current_step[0] == 3:
+            user_data["feedback_text"] = feedback_input.value.strip()
+            logger.info("Texto de feedback coletado.")
+            return True
+        return True
+
+    def submit_feedback(e):
+        logger.info("Enviando feedback...")
+        success = send_feedback_email(
+            user_email=user_data["email"], user_message=user_data, page=page
+        )
+        if success:
+            snack_bar = ft.SnackBar(content=ft.Text("Feedback enviado com sucesso!"))
+            page.overlay.append(snack_bar)
+            snack_bar.open = True
+            logger.info("Feedback enviado com sucesso.")
+            current_step[0] = 0
+            reset_feedback()
+            update_view()
+            page.go("/downloads")
+        else:
+            snack_bar = ft.SnackBar(
+                content=ft.Text("Erro ao enviar o feedback. Tente novamente.")
+            )
+            page.overlay.append(snack_bar)
+            snack_bar.open = True
+            logger.error("Falha ao enviar o feedback.")
+        page.update()
+
+    def update_review():
+        email = user_data.get("email", "")
+        rating = user_data.get("rating", 0)
+        category = user_data.get("category", "")
+        subcategory = user_data.get("subcategory", "")
+        feedback_text_value = user_data.get("feedback_text", "")
+        review_content = f"""
+        **Por favor, revise suas informações:**  
+        **Email:** {email}  
+        **Avaliação:** {rating} estrelas  
+        **Categoria:** {category}  
+        **Subcategoria:** {subcategory}  
+        **Feedback:**  
+        {feedback_text_value}
+        """
+        review_text.value = review_content
+        review_text.update()
+        logger.info("Conteúdo de revisão atualizado.")
+
+    def reset_feedback():
+        email_input.value = ""
+        update_stars(-1)
+        category_radio_group.value = "Sugestão"
+        subcategory_radio_group.value = "Funcional"
+        feedback_input.value = ""
+        rating_error.value = ""
+        email_input.error_text = None
+        page.update()
+        logger.info("Formulário de feedback reiniciado.")
+
+    # -------- Passo 1: E-mail --------
+    email_input = ft.TextField(
+        label="Seu E-mail",
+        hint_text="exemplo@dominio.com",
+        width=300,
+        keyboard_type=ft.KeyboardType.EMAIL,
+    )
+
+    step1 = ft.Column(
+        [
+            ft.Text(
+                "Etapa 1 de 5: Insira seu e-mail", size=20, weight=ft.FontWeight.BOLD
+            ),
+            email_input,
+            ft.Row(
+                [ft.ElevatedButton("Próximo", on_click=next_step)],
+                alignment=ft.MainAxisAlignment.CENTER,
+            ),
+        ],
+        alignment=ft.MainAxisAlignment.CENTER,
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        visible=True,
+    )
+
+    # -------- Passo 2: Avaliação por Estrelas --------
+    selected_rating = [0]
     stars_ref = []
 
-    # Função para atualizar as estrelas com base na seleção
+    rating_error = ft.Text("", color=ft.colors.RED)
+
     def update_stars(selected_index):
-        """
-        Atualiza as cores das estrelas com base no índice selecionado.
-        """
+        selected_rating[0] = selected_index + 1
         for i, star in enumerate(stars_ref):
             if i <= selected_index:
-                star.icon_color = (
-                    ft.colors.AMBER
-                ) 
+                star.icon = ft.icons.STAR
+                star.icon_color = ft.colors.YELLOW
             else:
-                star.icon_color = ft.colors.GREY  
+                star.icon = ft.icons.STAR_OUTLINE
+                star.icon_color = ft.colors.GREY
             star.update()
+        logger.info(f"Estrelas atualizadas: {selected_rating[0]} selecionadas.")
 
     def on_star_click(e):
-        nonlocal selected_rating_ref
         selected_index = int(e.control.data)
-        selected_rating_ref = selected_index + 1
         update_stars(selected_index)
-        logger.info(f"Avaliação selecionada: {selected_rating_ref} estrelas")
+        logger.info(f"Estrela clicada: {selected_index + 1}")
 
     for i in range(5):
         star = ft.IconButton(
-            icon=ft.icons.STAR,
-            icon_color=ft.colors.GREY,  
-            data=i,  
+            icon=ft.icons.STAR_OUTLINE,
+            icon_color=ft.colors.GREY,
+            data=i,
             on_click=on_star_click,
         )
         stars_ref.append(star)
 
-    category_segmented_button = ft.SegmentedButton(
-        selected={"Sugestão"},  # Um valor padrão selecionado para evitar o erro
-        allow_multiple_selection=False,
-        allow_empty_selection=False,
-        segments=[
-            ft.Segment(value="Sugestão", label=ft.Text("Sugestão")),
-            ft.Segment(value="Problema", label=ft.Text("Problema")),
-            ft.Segment(value="Elogio", label=ft.Text("Elogio")),
+    step2 = ft.Column(
+        [
+            ft.Text(
+                "Etapa 2 de 5: Avalie sua experiência",
+                size=20,
+                weight=ft.FontWeight.BOLD,
+            ),
+            ft.Row(stars_ref, alignment=ft.MainAxisAlignment.CENTER),
+            rating_error,
+            ft.Row(
+                [
+                    ft.ElevatedButton("Voltar", on_click=previous_step),
+                    ft.ElevatedButton("Próximo", on_click=next_step),
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+            ),
         ],
+        alignment=ft.MainAxisAlignment.CENTER,
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        visible=False,
     )
 
-    subcategory_segmented_button = ft.SegmentedButton(
-        selected={"Funcional"},
-        allow_multiple_selection=False,
-        allow_empty_selection=False,
-        segments=[
-            ft.Segment(value="Funcional", label=ft.Text("Funcional")),
-            ft.Segment(value="Estético", label=ft.Text("Estético")),
-            ft.Segment(value="Usabilidade", label=ft.Text("Usabilidade")),
-        ],
+    # -------- Passo 3: Categoria e Subcategoria --------
+    category_radio_group = ft.RadioGroup(
+        content=ft.Row(
+            [
+                ft.Radio(value="Sugestão", label="Sugestão"),
+                ft.Radio(value="Problema", label="Problema"),
+                ft.Radio(value="Elogio", label="Elogio"),
+            ],
+            alignment=ft.MainAxisAlignment.CENTER,
+        ),
+        value="Sugestão",
     )
 
+    subcategory_radio_group = ft.RadioGroup(
+        content=ft.Row(
+            [
+                ft.Radio(value="Funcional", label="Funcional"),
+                ft.Radio(value="Estético", label="Estético"),
+                ft.Radio(value="Usabilidade", label="Usabilidade"),
+            ],
+            alignment=ft.MainAxisAlignment.CENTER,
+        ),
+        value="Funcional",
+    )
+
+    step3 = ft.Column(
+        [
+            ft.Text(
+                "Etapa 3 de 5: Escolha a categoria", size=20, weight=ft.FontWeight.BOLD
+            ),
+            ft.Text("Categoria do Feedback:"),
+            category_radio_group,
+            ft.Text("Subcategoria do Feedback:"),
+            subcategory_radio_group,
+            ft.Row(
+                [
+                    ft.ElevatedButton("Voltar", on_click=previous_step),
+                    ft.ElevatedButton("Próximo", on_click=next_step),
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+            ),
+        ],
+        alignment=ft.MainAxisAlignment.CENTER,
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        visible=False,
+    )
+
+    # -------- Passo 4: Feedback Adicional --------
     feedback_input = ft.TextField(
-        label="Feedback (opcional) ",
-        ref=feedback_input_ref,
+        label="Feedback (opcional)",
         hint_text="Digite seu feedback aqui",
         multiline=True,
         min_lines=3,
         max_lines=5,
-        col=10,
+        width=400,
     )
 
-
-
-    def submit_feedback(e):
-        feedback_text = feedback_input_ref.current.value
-        selected_category = category_segmented_button.selected
-        selected_subcategory = subcategory_segmented_button.selected
-
-        logger.info(f"Feedback: {feedback_text}")
-        logger.info(f"Avaliação: {selected_rating_ref} estrelas")
-        logger.info(f"Categoria: {selected_category}")
-        logger.info(f"Subcategoria: {selected_subcategory}")
-
-        # Enviar feedback via e-mail
-        try:
-            smtp_server = os.getenv("SMTP_SERVER")
-            smtp_port = os.getenv("SMTP_PORT")
-            smtp_username = os.getenv("EMAIL_USER")
-            smtp_password = os.getenv("EMAIL_PASSWORD")
-
-            # Verificar se todas as variáveis de ambiente estão definidas
-            if not all([smtp_server, smtp_port, smtp_username, smtp_password]):
-                logger.error(
-                    "Uma ou mais variáveis de ambiente não estão definidas corretamente."
-                )
-                return
-
-            smtp_port = int(smtp_port)
-
-            msg = MIMEMultipart()
-            msg["From"] = smtp_username
-            msg["To"] = "Alisondev77@hotmail.com"
-            msg["Subject"] = f"Feedback - MultiTools ({selected_category})"
-
-            # Conteúdo do e-mail
-            email_body = f"""
-            Avaliação: {selected_rating_ref} estrelas
-            Categoria: {selected_category}
-            Subcategoria: {selected_subcategory}
-            Feedback: {feedback_text}
-            """
-            msg.attach(MIMEText(email_body, "plain"))
-
-            # Usar gerenciador de contexto para a conexão SMTP
-            with smtplib.SMTP(smtp_server, smtp_port) as server:
-                server.ehlo()  # Identificar a conexão com o servidor SMTP
-                server.starttls()  # Inicializar a conexão segura
-                server.ehlo()  # Identificar a conexão segura após o starttls
-                server.login(smtp_username, smtp_password)  # Login no servidor
-                server.sendmail(
-                    smtp_username, msg["To"], msg.as_string()
-                )
-
-            logger.info("E-mail de feedback enviado com sucesso.")
-
-        except Exception as e:
-            logger.error(f"Erro ao enviar o e-mail de feedback: {e}")
-
-    submit_button = ft.ElevatedButton(
-        text="Enviar Feedback", icon=ft.icons.SEND, on_click=submit_feedback, col=5
+    step4 = ft.Column(
+        [
+            ft.Text(
+                "Etapa 4 de 5: Feedback adicional", size=20, weight=ft.FontWeight.BOLD
+            ),
+            feedback_input,
+            ft.Row(
+                [
+                    ft.ElevatedButton("Voltar", on_click=previous_step),
+                    ft.ElevatedButton("Próximo", on_click=next_step),
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+            ),
+        ],
+        alignment=ft.MainAxisAlignment.CENTER,
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        visible=False,
     )
 
-    return ft.Container(
-        padding=ft.padding.all(20),
+    # -------- Passo 5: Revisão e Envio --------
+    review_text = ft.Markdown("")  # Corrigido sem `on_change`
+
+    submit_button = ft.ElevatedButton("Enviar Feedback", on_click=submit_feedback)
+
+    step5 = ft.Column(
+        [
+            ft.Text("Etapa 5 de 5: Revisão", size=20, weight=ft.FontWeight.BOLD),
+            review_text,
+            ft.Row(
+                [
+                    ft.ElevatedButton("Voltar", on_click=previous_step),
+                    submit_button,
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+            ),
+        ],
+        alignment=ft.MainAxisAlignment.CENTER,
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        visible=False,
+    )
+
+    # Listagem das etapas
+    steps_views = [step1, step2, step3, step4, step5]
+
+    # Container com animação para transições
+    container_steps = ft.Container(
         content=ft.Column(
+            steps_views,
             alignment=ft.MainAxisAlignment.CENTER,
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            controls=[
-                ft.Text(
-                    value="Avalie a experiência",
-                    size=28,
-                    color=ft.colors.PRIMARY,
-                    weight=ft.FontWeight.BOLD,
-                ),
-                ft.Image(
-                    src="/images/logo.png",
-                    fit=ft.ImageFit.CONTAIN,
-                    height=300,
-                    width=300,
-                ),
-                ft.Text(
-                    value="Avaliação por estrelas",
-                    weight=ft.FontWeight.BOLD,
-                    size=24,
-                    color=ft.colors.PRIMARY,
-                ),
-                ft.Row(
-                    alignment=ft.MainAxisAlignment.CENTER, controls=stars_ref
-                ),
-                ft.Text(
-                    value="Categoria de feedback",
-                    weight=ft.FontWeight.BOLD,
-                    size=24,
-                    color=ft.colors.PRIMARY,
-                ),
-                category_segmented_button,
-                ft.Text(
-                    value="Subcategoria de feedback",
-                    weight=ft.FontWeight.BOLD,
-                    size=24,
-                    color=ft.colors.PRIMARY,
-                ),
-                subcategory_segmented_button,
-                ft.ResponsiveRow(
-                    alignment=ft.MainAxisAlignment.CENTER,
-                    controls=[feedback_input, submit_button],
-                ),
-            ],
-            spacing=20,
         ),
+        animate=ft.animation.Animation(500, ft.AnimationCurve.EASE_IN_OUT),
     )
+
+    return container_steps
+    update_view()  # Inicializa a primeira view

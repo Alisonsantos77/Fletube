@@ -1,55 +1,107 @@
+# send_feedback.py
+
 import smtplib
-import re
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import logging
 import os
+import requests
 import flet as ft
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logging.basicConfig(
+    filename="logs/app.log",
+    format="%(asctime)s %(levelname)s: %(message)s",
+    level=logging.INFO,
+)
+logging.getLogger("flet_core").setLevel(logging.INFO)
+
+# Load environment variables (if needed)
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+FEEDBACK_RECIPIENT_EMAIL = os.getenv(
+    "FEEDBACK_RECIPIENT_EMAIL", "your_email@example.com"
+)
+SMTP_SERVER = os.getenv("SMTP_SERVER")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+EMAIL_USER = os.getenv("EMAIL_USER")
+EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 
 
 def send_feedback_email(user_email, user_message, page: ft.Page):
     """
-    Envia um e-mail de feedback utilizando smtplib.
+    Sends a feedback email using smtplib and stores the data in Supabase.
 
     Args:
-        user_email (str): Endereço de e-mail do usuário que está enviando o feedback.
-        user_message (str): Mensagem de feedback do usuário.
+        user_email (str): User's email address who is sending the feedback.
+        user_message (dict): Dictionary containing feedback data.
+        page (ft.Page): Flet page instance to display notifications.
+
+    Returns:
+        bool: True if the email was sent and data stored successfully, False otherwise.
     """
     try:
-        # Identifica o provedor de e-mail usando regex
-        if re.search(r"@gmail\.com$", user_email, re.IGNORECASE):
-            smtp_server = os.getenv("SMTP_SERVER")
-            smtp_port = (os.getenv("SMTP_PORT"))
-            smtp_username = os.getenv("EMAIL_USER")
-            smtp_password = os.getenv("EMAIL_PASSWORD")
+        # Insert feedback into Supabase
+        supabase_endpoint = f"{SUPABASE_URL}/rest/v1/feedbacks"
+        headers_supabase = {
+            "apikey": SUPABASE_KEY,
+            "Authorization": f"Bearer {SUPABASE_KEY}",
+            "Content-Type": "application/json",
+            "Prefer": "return=representation",  # To return the inserted data
+        }
 
+        feedback_data = {
+            "email": user_email,
+            "rating": user_message.get("rating", 0),
+            "category": user_message.get("category", ""),
+            "subcategory": user_message.get("subcategory", ""),
+            "feedback_text": user_message.get("feedback_text", ""),
+        }
+
+        res_supabase = requests.post(
+            supabase_endpoint, headers=headers_supabase, json=feedback_data
+        )
+
+        if res_supabase.status_code in [200, 201]:
+            logging.info("Feedback stored in Supabase successfully.")
         else:
-            logger.error("Provedor de e-mail não suportado.")
-            snack_bar = ft.SnacBar("Provedor de e-mail não suportado.")
-            page.overlay.append(snack_bar)
-            snack_bar.open = True
+            logging.error(
+                f"Error storing feedback in Supabase: {res_supabase.status_code}, {res_supabase.text}"
+            )
             return False
-        # Configura a mensagem
-        msg = MIMEMultipart()
-        msg["From"] = smtp_username
-        msg["To"] = "Alisondev77@hotmail.com"  # Meu email que receberá o feedback
+
+        # Create the email message
+        msg = MIMEMultipart("alternative")
+        msg["From"] = EMAIL_USER
+        msg["To"] = FEEDBACK_RECIPIENT_EMAIL
         msg["Subject"] = "Feedback - Fletube"
-        msg.attach(MIMEText(user_message, "plain"))
 
-        # Conecta ao servidor SMTP e envia o e-mail
-        server = smtplib.SMTP(smtp_server, smtp_port)
-        server.starttls()
-        server.login(smtp_username, smtp_password)
-        server.sendmail(smtp_username, msg["To"], msg.as_string())
-        server.quit()
+        # HTML email template
+        html_body = f"""
+        <html>
+            <body>
+                <h2>Feedback - Fletube</h2>
+                <p><strong>User Email:</strong> {user_email}</p>
+                <p><strong>Rating:</strong> {user_message.get('rating', 0)} stars</p>
+                <p><strong>Category:</strong> {user_message.get('category', '')}</p>
+                <p><strong>Subcategory:</strong> {user_message.get('subcategory', '')}</p>
+                <p><strong>Feedback:</strong><br>{user_message.get('feedback_text', '').replace('\n', '<br>')}</p>
+            </body>
+        </html>
+        """
 
-        logger.info("E-mail enviado com sucesso.")
+        # Attach the HTML body
+        msg.attach(MIMEText(html_body, "html"))
+
+        # Send the email
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+            server.starttls()
+            server.login(EMAIL_USER, EMAIL_PASSWORD)
+            server.sendmail(EMAIL_USER, FEEDBACK_RECIPIENT_EMAIL, msg.as_string())
+
+        logging.info("Feedback email sent successfully.")
         return True
 
     except Exception as e:
-        logger.error(f"Erro ao enviar o e-mail: {e}")
+        logging.error(f"Error sending feedback email: {e}")
         return False
