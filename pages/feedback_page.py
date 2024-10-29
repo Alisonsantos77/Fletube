@@ -307,7 +307,7 @@ def FeedbackPage(page: ft.Page):
     )
 
     # -------- Passo 5: Revisão e Envio --------
-    review_text = ft.Markdown("")  # Corrigido sem `on_change`
+    review_text = ft.Markdown("") 
 
     submit_button = ft.ElevatedButton("Enviar Feedback", on_click=submit_feedback)
 

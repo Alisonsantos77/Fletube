@@ -16,7 +16,6 @@ logging.basicConfig(
 )
 logging.getLogger("flet_core").setLevel(logging.INFO)
 
-# Load environment variables (if needed)
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 FEEDBACK_RECIPIENT_EMAIL = os.getenv(
@@ -41,7 +40,6 @@ def send_feedback_email(user_email, user_message, page: ft.Page):
         bool: True if the email was sent and data stored successfully, False otherwise.
     """
     try:
-        # Insert feedback into Supabase
         supabase_endpoint = f"{SUPABASE_URL}/rest/v1/feedbacks"
         headers_supabase = {
             "apikey": SUPABASE_KEY,
@@ -70,7 +68,6 @@ def send_feedback_email(user_email, user_message, page: ft.Page):
             )
             return False
 
-        # Create the email message
         msg = MIMEMultipart("alternative")
         msg["From"] = EMAIL_USER
         msg["To"] = FEEDBACK_RECIPIENT_EMAIL
@@ -90,10 +87,8 @@ def send_feedback_email(user_email, user_message, page: ft.Page):
         </html>
         """
 
-        # Attach the HTML body
         msg.attach(MIMEText(html_body, "html"))
 
-        # Send the email
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
             server.starttls()
             server.login(EMAIL_USER, EMAIL_PASSWORD)
