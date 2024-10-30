@@ -8,6 +8,7 @@ from pages.login_page import LoginPage
 from pages.feedback_page import FeedbackPage
 from components.drawer import create_drawer
 from components.user_menu import create_user_menu
+from services.download_manager import DownloadManager
 
 # Configurando o logging nativo
 logging.basicConfig(
@@ -18,7 +19,7 @@ logging.basicConfig(
 logging.getLogger("flet_core").setLevel(logging.INFO)
 
 
-def setup_routes(page: ft.Page):
+def setup_routes(page: ft.Page, download_manager: DownloadManager):
     logging.info("Configurando rotas")
 
     def route_change(route):
@@ -28,12 +29,12 @@ def setup_routes(page: ft.Page):
         page.views.append(
             ft.View(
                 route="/downloads",
+                scroll=ft.ScrollMode.AUTO,
                 drawer=create_drawer(page),
                 appbar=ft.AppBar(
-                    bgcolor=ft.colors.TRANSPARENT,
-                    actions=[create_user_menu(page)],
+                    bgcolor=ft.colors.TRANSPARENT, actions=[create_user_menu(page)]
                 ),
-                controls=[DownloadPage(page)],
+                controls=[DownloadPage(page, download_manager)],
             )
         )
 

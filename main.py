@@ -6,13 +6,14 @@ from routes import setup_routes
 from services.send_feedback import (
     retry_failed_feedbacks,
     send_feedback_email,
-    clean_feedback_backup
+    clean_feedback_backup,
 )
+from services.download_manager import DownloadManager
 
 # Configuração de logging
 logging.basicConfig(
     filename="logs/app.log",
-    format="%(asctime)s %(levelname)s: %(message)s",
+    format="%(asctime)s %(levelname)s: %(name)s: %(message)s",
     level=logging.INFO,
 )
 logging.getLogger("flet_core").setLevel(logging.INFO)
@@ -44,13 +45,13 @@ def apply_saved_theme_and_font(page: ft.Page):
     )
     logging.info(f"Fonte carregada: {font_family_value}")
 
-    # Forçar atualização para aplicar tema e fonte
     page.update()
 
 
 def main(page: ft.Page):
     logging.info("Iniciando Fletube")
     
+    download_manager = DownloadManager(page)
 
     # Tenta enviar feedbacks locais ao iniciar
     retry_failed_feedbacks(page)
@@ -61,8 +62,8 @@ def main(page: ft.Page):
     # Configuração do título da página
     page.title = "Fletube"
 
-    # Configuração de rotas
-    setup_routes(page)
+    # Configuração de rotas, passando o DownloadManager
+    setup_routes(page, download_manager)
 
     # Função para alternar tema
     def alternar_tema(e):
@@ -73,6 +74,19 @@ def main(page: ft.Page):
         page.theme_mode = new_theme_mode
         page.client_storage.set("theme_mode", new_theme_mode.name)
         page.update()
+
+    # Configuração de evento de ciclo de vida da aplicação
+    def handle_lifecycle_change(e: ft.AppLifecycleStateChangeEvent):
+        if e.data == "inactive":
+            logging.info("Aplicação em segundo plano")
+            page.session.set("app_in_background", True)
+        elif e.data == "active":
+            logging.info("Aplicação voltou ao primeiro plano")
+            page.session.set("app_in_background", False)
+            page.update()
+
+    # Atribuir o manipulador de ciclo de vida ao evento
+    page.on_app_lifecycle_state_change = handle_lifecycle_change
 
     # Configurar evento de teclado para atalhos de navegação
     def on_key_event(e: ft.KeyboardEvent):

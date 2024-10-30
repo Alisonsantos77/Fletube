@@ -25,7 +25,7 @@ def HistoryPage(page: ft.Page):
     selected_items = set()  # Conjunto para armazenar IDs selecionados
     last_deleted_items = []  # Lista para armazenar itens excluídos temporariamente
 
-    dlg_modal_rf = ft.Ref[ft.AlertDialog]()  # Definindo a referência para AlertDialog
+    dlg_modal_rf = ft.Ref[ft.AlertDialog]() 
     
     counts_text = ft.Text("", size=16, weight=ft.FontWeight.W_600)
 
@@ -46,13 +46,11 @@ def HistoryPage(page: ft.Page):
             checkbox.checked = item_id in selected_items
             page.update()
 
-        # Função para deletar um item do histórico
         def delete_item(e, item_id=item_id, current_item=item):
             try:
                 excluir_download_bem_sucedido_client(page, item_id)
                 last_deleted_items.append(current_item)
                 update_history_view()
-                # Mostra SnackBar com opção de desfazer
                 snack_bar = ft.SnackBar(
                     content=ft.Text("Item excluído."),
                     bgcolor=ft.colors.PRIMARY,
@@ -75,7 +73,6 @@ def HistoryPage(page: ft.Page):
         def undo_delete(e):
             for deleted_item in last_deleted_items:
                 salvar_downloads_bem_sucedidos_client(page, deleted_item)
-                # salvar_downloads_bem_sucedidos_session(page, deleted_item)
             last_deleted_items.clear()
             update_history_view()
             snack_bar = ft.SnackBar(
@@ -86,7 +83,6 @@ def HistoryPage(page: ft.Page):
             snack_bar.open = True
             page.update()
 
-        # Checkbox para multi-seleção
         checkbox = ft.Checkbox(
             value=item_id in selected_items,
             on_change=toggle_selection,
@@ -128,20 +124,20 @@ def HistoryPage(page: ft.Page):
                                     controls=[
                                         ft.IconButton(
                                             icon=ft.icons.PLAY_ARROW,
-                                            on_click=None,  # Desativar a função de clique
+                                            on_click=None,  
                                             tooltip="Em breve",
                                             icon_size=20,
-                                            disabled=True,  # Desativar o botão
+                                            disabled=True,  
                                             style=ft.ButtonStyle(
                                                 padding=ft.padding.all(8)
                                             ),
                                         ),
                                         ft.IconButton(
                                             icon=ft.icons.FOLDER_OPEN,
-                                            on_click=None,  # Desativar a função de clique
+                                            on_click=None,  
                                             tooltip="Em breve",
                                             icon_size=20,
-                                            disabled=True,  # Desativar o botão
+                                            disabled=True,  
                                             style=ft.ButtonStyle(
                                                 padding=ft.padding.all(8)
                                             ),
@@ -159,10 +155,10 @@ def HistoryPage(page: ft.Page):
                                         ),
                                         ft.IconButton(
                                             icon=ft.icons.DELETE,
-                                            on_click=None,  # Desativar a função de clique
+                                            on_click=None,  
                                             tooltip="Em breve",
                                             icon_size=20,
-                                            disabled=True,  # Desativar o botão
+                                            disabled=True,  
                                             style=ft.ButtonStyle(
                                                 padding=ft.padding.all(8)
                                             ),
@@ -211,11 +207,9 @@ def HistoryPage(page: ft.Page):
 
         def confirm_delete(e):
             excluir_todos_downloads_bem_sucedidos_client(page)
-            # excluir_todos_downloads_bem_sucedidos_session(page)
             last_deleted_items.extend(download_history)
             update_history_view()
             dlg_modal_rf.current.open = False
-            # Mostra SnackBar com opção de desfazer
             snack_bar = ft.SnackBar(
                 content=ft.Text("Todos os itens foram excluídos."),
                 bgcolor=ft.colors.PRIMARY,
@@ -246,7 +240,6 @@ def HistoryPage(page: ft.Page):
     def undo_delete_all(e):
         for item in last_deleted_items:
             salvar_downloads_bem_sucedidos_client(page, item)
-            # salvar_downloads_bem_sucedidos_session(page, item)
         last_deleted_items.clear()
         update_history_view()
         snack_bar = ft.SnackBar(
@@ -284,7 +277,6 @@ def HistoryPage(page: ft.Page):
         
         page.update()
 
-    # Botão "Excluir Tudo"
     excluir_tudo_button = ft.ElevatedButton(
         text="Excluir Tudo",
         icon=ft.icons.DELETE_FOREVER,
@@ -293,7 +285,6 @@ def HistoryPage(page: ft.Page):
         on_click=delete_all,
     )
 
-    # Botão "Atualizar Lista"
     atualizar_lista_button = ft.ElevatedButton(
         text="Atualizar Lista",
         icon=ft.icons.UPDATE,
@@ -311,7 +302,6 @@ def HistoryPage(page: ft.Page):
         content_padding=ft.padding.all(10),
     )
 
-    # Dropdown de ordenação
     sort_dropdown = ft.Dropdown(
         options=[
             ft.dropdown.Option("title", "Título"),
@@ -328,7 +318,7 @@ def HistoryPage(page: ft.Page):
         max_extent=240,
         child_aspect_ratio=0.75,
         spacing=10,
-        expand=True,  # Expande o GridView para preencher o espaço disponível
+        expand=True,  
     )
 
     # AlertDialog para confirmações

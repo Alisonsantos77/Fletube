@@ -50,7 +50,6 @@ def save_feedback_locally(feedback_data):
         else:
             backups = []
 
-        # Salva "created_at" em vez de "timestamp"
         feedback_data["created_at"] = datetime.now(timezone.utc).isoformat()
         backups.append(feedback_data)
 
