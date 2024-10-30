@@ -1,40 +1,44 @@
+# components/general_settings.py
+
 import flet as ft
+import logging
+
+
+def sync_local_feedback(page: ft.Page):
+    from services.send_feedback import sync_local_feedback
+
+    sync_local_feedback(page)
 
 
 def GeneralSettings(page: ft.Page):
-
-    language_dropdown_ref = ft.Ref[ft.Dropdown]()
-
-    locales_supported = [
-        ft.Locale(language_code="pt", country_code="BR"),
-        ft.Locale(language_code="en", country_code="US"),
-    ]
-
-    # Atualizar o idioma do app e salvar no client_storage
-    def update_language(language_code):
-        if language_code == "pt":
-            page.current_locale = ft.Locale(language_code="pt", country_code="BR")
-        elif language_code == "en":
-            page.current_locale = ft.Locale(language_code="en", country_code="US")
-
-        page.supported_locales = locales_supported
-        page.client_storage.set("language", language_code)
-        page.update()
-
-    language_value = page.client_storage.get("language")
-    if language_value is None:
-        language_value = "pt"
-
-    language_dropdown = ft.Dropdown(
-        ref=language_dropdown_ref,
-        label="Idioma",
-        options=[
-            ft.dropdown.Option("pt", "Português"),
-            ft.dropdown.Option("en", "Inglês"),
-        ],
-        value=language_value,
-        on_change=lambda e: update_language(e.control.value),
+    reset_button = ft.ElevatedButton(
+        text="Resetar Configurações 🛠️",
+        icon=ft.icons.RESTART_ALT,
+        on_click=lambda e: reset_app_settings(page),
+        style=ft.ButtonStyle(
+            bgcolor=ft.colors.ERROR,
+            color=ft.colors.ON_ERROR,
+            elevation=4,
+            shape=ft.RoundedRectangleBorder(radius=8),
+        ),
     )
+
+    def reset_app_settings(page: ft.Page):
+        page.client_storage.clear()  # Limpa todos os dados de configurações
+        # Salva um valor indicando que as configurações foram resetadas
+        page.client_storage.set("config_reset", True)
+
+        snack_bar = ft.SnackBar(
+            content=ft.Text("Configurações resetadas! 🚀 Reiniciando o app..."),
+            bgcolor=ft.colors.PRIMARY,
+        )
+        page.overlay.append(snack_bar)
+        snack_bar.open = True
+        page.update()
+        logging.info("Configurações resetadas pelo usuário.")
+
+        # Reiniciar ou redirecionar para a home
+        page.go("/")
 
     feedback_text = ft.Text(
         value="Ei, você! 🙋‍♂️ Que tal nos ajudar a melhorar ainda mais este app? Enviar um feedback é rápido, indolor e pode tornar sua experiência (e de outros usuários) ainda melhor! Queremos saber de tudo: elogios, críticas, ideias malucas... Só clicar no botão e mandar ver!",
@@ -47,9 +51,7 @@ def GeneralSettings(page: ft.Page):
     feedback_button = ft.ElevatedButton(
         text="Enviar Feedback 👍",
         icon=ft.icons.FEEDBACK,
-        on_click=lambda e: page.go(
-            "/feedback"
-        ),
+        on_click=lambda e: page.go("/feedback"),
         style=ft.ButtonStyle(
             bgcolor=ft.colors.SECONDARY,
             color=ft.colors.ON_SECONDARY,
@@ -61,8 +63,9 @@ def GeneralSettings(page: ft.Page):
     return ft.Column(
         [
             ft.Container(
-                content=language_dropdown,
+                content=reset_button,
                 col={"sm": 12, "md": 6},
+                padding=ft.padding.all(10),
             ),
             ft.Divider(),
             ft.Text("Feedback", weight=ft.FontWeight.BOLD),

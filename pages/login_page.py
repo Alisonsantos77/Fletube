@@ -3,7 +3,12 @@ import logging
 import flet as ft
 from flet.auth.providers import GitHubOAuthProvider, GoogleOAuthProvider
 from flet.security import encrypt, decrypt
+from dotenv import load_dotenv
 
+# Carregar variáveis de ambiente do .env
+load_dotenv()
+
+# Variáveis de ambiente
 GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID")
 GITHUB_CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET")
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
@@ -12,7 +17,43 @@ SECRET = os.getenv("SECRET")
 REDIRECT_URL = os.getenv("REDIRECT_URL")
 
 
+# Função de validação das variáveis de ambiente
+def check_env_vars(page: ft.Page):
+    missing_vars = []
+    required_vars = {
+        "GITHUB_CLIENT_ID": GITHUB_CLIENT_ID,
+        "GITHUB_CLIENT_SECRET": GITHUB_CLIENT_SECRET,
+        "GOOGLE_CLIENT_ID": GOOGLE_CLIENT_ID,
+        "GOOGLE_CLIENT_SECRET": GOOGLE_CLIENT_SECRET,
+        "SECRET": SECRET,
+        "REDIRECT_URL": REDIRECT_URL,
+    }
+    for var_name, var_value in required_vars.items():
+        if not var_value:
+            missing_vars.append(var_name)
+
+    if missing_vars:
+        missing_vars_message = (
+            "As seguintes variáveis de ambiente estão ausentes: "
+            + ", ".join(missing_vars)
+        )
+        snack_bar = ft.SnackBar(
+            content=ft.Text(missing_vars_message),
+            bgcolor=ft.colors.RED_ACCENT_200,
+        )
+        page.overlay.append(snack_bar)
+        snack_bar.open = True
+        page.update()
+        logging.error(missing_vars_message)
+        return False
+    return True
+
+
 def LoginPage(page: ft.Page):
+    # Validação das variáveis de ambiente antes de prosseguir
+    if not check_env_vars(page):
+        return
+
     github_provider = GitHubOAuthProvider(
         client_id=GITHUB_CLIENT_ID,
         client_secret=GITHUB_CLIENT_SECRET,

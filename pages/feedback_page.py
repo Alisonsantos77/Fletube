@@ -21,9 +21,7 @@ logger = logging.getLogger(__name__)
 # Variáveis de ambiente
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-FEEDBACK_RECIPIENT_EMAIL = os.getenv(
-    "FEEDBACK_RECIPIENT_EMAIL", "your_email@example.com"
-)
+FEEDBACK_RECIPIENT_EMAIL = os.getenv("FEEDBACK_RECIPIENT_EMAIL")
 
 
 def FeedbackPage(page: ft.Page):

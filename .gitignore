@@ -3,7 +3,7 @@ __pychache__/
 *.pyc
 
 # Ignore environment folders
-.env/
+.env
 venv/
 
 # Ignore system files

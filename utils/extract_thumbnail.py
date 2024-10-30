@@ -42,6 +42,14 @@ def extract_thumbnail_url(video_url):
             else:
                 raise ValueError("Thumbnail não encontrada.")
 
+        except yt_dlp.utils.DownloadError as e:
+            logger.error(f"Erro ao extrair thumbnail: {e}")
+            if "This playlist is private" in str(e) or "Private video" in str(e):
+                raise ValueError(
+                    "Não é possível extrair a thumbnail: A playlist ou vídeo é privado."
+                )
+            else:
+                raise ValueError("Erro ao extrair thumbnail.")
         except Exception as e:
             logger.error(f"Erro ao extrair thumbnail: {e}")
             raise ValueError("Erro ao extrair thumbnail.")

@@ -26,6 +26,9 @@ def HistoryPage(page: ft.Page):
     last_deleted_items = []  # Lista para armazenar itens excluídos temporariamente
 
     dlg_modal_rf = ft.Ref[ft.AlertDialog]()  # Definindo a referência para AlertDialog
+    
+    counts_text = ft.Text("", size=16, weight=ft.FontWeight.W_600)
+
 
     def render_download_item(item):
         item_id = item.get("id")
@@ -33,124 +36,6 @@ def HistoryPage(page: ft.Page):
         if not item_id:
             logger.warning(f"Item sem ID encontrado: {item}")
             return ft.Container()
-
-        # Funções para os botões
-        # def open_folder(e):
-        #     try:
-        #         if os.path.exists(file_path):
-        #             os.startfile(os.path.dirname(file_path))
-
-        #             snack_bar = ft.SnackBar(
-        #                 content=ft.Text("Abrindo local do arquivo."),
-        #                 bgcolor=ft.colors.PRIMARY,
-        #             )
-        #             page.overlay.append(snack_bar)
-        #             snack_bar.open = True
-        #             page.update()
-        #         else:
-        #             logger.error(f"O caminho do arquivo não existe: {file_path}")
-        #             snack_bar = ft.SnackBar(
-        #                 content=ft.Text("Caminho do arquivo não encontrado."),
-        #                 bgcolor=ft.colors.ERROR,
-        #             )
-        #             page.overlay.append(snack_bar)
-        #             snack_bar.open = True
-        #             page.update()
-        #     except Exception as ex:
-        #         logger.error(f"Erro ao abrir a pasta: {ex}")
-        #         snack_bar = ft.SnackBar(
-        #             content=ft.Text("Erro ao abrir a pasta."),
-        #             bgcolor=ft.colors.ERROR,
-        #         )
-        #         page.overlay.append(snack_bar)
-        #         snack_bar.open = True
-        #         page.update()
-
-        # def delete_from_device(e):
-        #     try:
-        #         if os.path.exists(file_path):
-        #             os.remove(file_path)
-        #             logger.info(f"Arquivo excluído: {file_path}")
-        #             # Remove do armazenamento
-        #             excluir_download_bem_sucedido_client(page, item_id)
-        #             # Adiciona ao histórico de exclusões para possível desfazer
-        #             last_deleted_items.append(item)
-        #             # Atualiza a interface
-        #             update_history_view()
-        #             # Mostra SnackBar com opção de desfazer
-        #             snack_bar = ft.SnackBar(
-        #                 content=ft.Text("Arquivo excluído."),
-        #                 bgcolor=ft.colors.ERROR,
-        #                 actions=[
-        #                     ft.TextButton(
-        #                         "Desfazer", on_click=lambda e: undo_delete(e)
-        #                     ),
-        #                 ],
-        #             )
-        #             page.overlay.append(snack_bar)
-        #             snack_bar.open = True
-        #             page.update()
-        #         else:
-        #             logger.error(f"O caminho do arquivo não existe: {file_path}")
-        #             snack_bar = ft.SnackBar(
-        #                 content=ft.Text("Caminho do arquivo não encontrado."),
-        #                 bgcolor=ft.colors.ERROR,
-        #             )
-        #             page.overlay.append(snack_bar)
-        #             snack_bar.open = True
-        #             page.update()
-        #     except Exception as ex:
-        #         logger.error(f"Erro ao excluir o arquivo: {ex}")
-        #         snack_bar = ft.SnackBar(
-        #             content=ft.Text("Erro ao excluir o arquivo."),
-        #             bgcolor=ft.colors.ERROR,
-        #         )
-        #         page.overlay.append(snack_bar)
-        #         snack_bar.open = True
-        #         page.update()
-
-        # def play_video(e):
-        #     if os.path.exists(file_path):
-        #         try:
-        #             # Adiciona o controle de vídeo à sobreposição
-        #             video_control = ft.Video(
-        #                 src=file_path,
-        #                 autoplay=True,
-        #                 controls=True,
-        #                 loop=False,
-        #                 width=800,
-        #                 height=450,
-        #                 on_completed=lambda e: (
-        #                     page.overlay.remove(video_control),
-        #                     page.update(),
-        #                 ),
-        #             )
-        #             page.overlay.append(video_control)
-        #             snack_bar = ft.SnackBar(
-        #                 content=ft.Text("Reproduzindo vídeo."),
-        #                 bgcolor=ft.colors.ON_PRIMARY_CONTAINER,
-        #             )
-        #             page.overlay.append(snack_bar)
-        #             snack_bar.open = True
-        #             page.update()
-        #         except Exception as ex:
-        #             logger.error(f"Erro ao reproduzir o vídeo: {ex}")
-        #             snack_bar = ft.SnackBar(
-        #                 content=ft.Text("Erro ao reproduzir o vídeo."),
-        #                 bgcolor=ft.colors.ERROR,
-        #             )
-        #             page.overlay.append(snack_bar)
-        #             snack_bar.open = True
-        #             page.update()
-        #     else:
-        #         logger.error(f"O caminho do arquivo não existe: {file_path}")
-        #         snack_bar = ft.SnackBar(
-        #             content=ft.Text("Caminho do arquivo não encontrado."),
-        #             bgcolor=ft.colors.ERROR,
-        #         )
-        #         page.overlay.append(snack_bar)
-        #         snack_bar.open = True
-        #         page.update()
 
         # Função para alternar a seleção do item
         def toggle_selection(e):
@@ -170,7 +55,7 @@ def HistoryPage(page: ft.Page):
                 # Mostra SnackBar com opção de desfazer
                 snack_bar = ft.SnackBar(
                     content=ft.Text("Item excluído."),
-                    bgcolor=ft.colors.SURFACE,
+                    bgcolor=ft.colors.PRIMARY,
                     action="Desfazer",
                 )
                 snack_bar.on_action = lambda e: undo_delete(e)
@@ -195,7 +80,7 @@ def HistoryPage(page: ft.Page):
             update_history_view()
             snack_bar = ft.SnackBar(
                 content=ft.Text("Exclusão desfeita."),
-                bgcolor=ft.colors.PRIMARY_CONTAINER,
+                bgcolor=ft.colors.PRIMARY,
             )
             page.overlay.append(snack_bar)
             snack_bar.open = True
@@ -366,7 +251,7 @@ def HistoryPage(page: ft.Page):
         update_history_view()
         snack_bar = ft.SnackBar(
             content=ft.Text("Exclusão desfeita."),
-            bgcolor=ft.colors.PRIMARY_CONTAINER,
+            bgcolor=ft.colors.PRIMARY,
         )
         page.overlay.append(snack_bar)
         snack_bar.open = True
@@ -390,6 +275,13 @@ def HistoryPage(page: ft.Page):
         history_grid.controls = [
             render_download_item(item) for item in filtered_history
         ]
+        
+        # Atualizar as contagens
+        total_downloads = len(download_history)
+        filtered_downloads = len(filtered_history)
+        counts_text.value = f"Total de downloads: {total_downloads} | Exibindo: {filtered_downloads}"
+        counts_text.update()
+        
         page.update()
 
     # Botão "Excluir Tudo"
@@ -457,6 +349,7 @@ def HistoryPage(page: ft.Page):
         content=ft.Column(
             controls=[
                 ft.Text("Histórico de Downloads", size=28, weight=ft.FontWeight.BOLD),
+                counts_text,
                 ft.Row(
                     controls=[
                         search_field,

@@ -192,7 +192,34 @@ def download_content(page: ft.Page, sidebar):
             barra_progress_video_rf.current.update()
 
             def progress_hook(d):
+                info_dict = d.get("info_dict", {})
+                video_id = info_dict.get("id", "")
+                if not video_id:
+                    video_id = str(uuid.uuid4())
+                    logger.warning(
+                        f"ID não encontrado nos metadados. Gerado ID: {video_id}"
+                    )
                 if d["status"] == "downloading":
+                    if video_id not in sidebar.items:
+                        title = info_dict.get("title", "Título Indisponível")
+                        thumbnail = info_dict.get("thumbnail", "/images/logo.png")
+                        file_path = d.get("filename", "")
+                        format_selected = format_dropdown
+                        download_data = {
+                            "id": video_id,
+                            "title": title,
+                            "thumbnail": thumbnail,
+                            "format": format_selected,
+                            "file_path": file_path,
+                        }
+                        sidebar.add_download_item(
+                            id=download_data["id"],
+                            title=download_data["title"],
+                            subtitle=download_data["format"],
+                            thumbnail_url=download_data["thumbnail"],
+                            file_path=download_data["file_path"],
+                        )
+
                     if "total_bytes" in d and "downloaded_bytes" in d:
                         progress = d["downloaded_bytes"] / d["total_bytes"]
                         barra_progress_video_rf.current.value = progress
@@ -202,6 +229,8 @@ def download_content(page: ft.Page, sidebar):
                         )
                         status_text_rf.current.color = ft.colors.PRIMARY
                         status_text_rf.current.update()
+                        sidebar.update_download_item(video_id, progress, "downloading")
+
                 elif d["status"] == "finished":
                     try:
                         info_dict = d.get("info_dict", {})
@@ -297,6 +326,7 @@ def download_content(page: ft.Page, sidebar):
                             target=conversion_hook, daemon=True
                         )
                         conversion_thread.start()
+                        sidebar.update_download_item(video_id, 1.0, "finished")
 
                     except Exception as e:
                         logger.error(f"Exception during processing download: {e}")
@@ -324,6 +354,7 @@ def download_content(page: ft.Page, sidebar):
                         snackbar.open = True
                         page.update()
                 elif d["status"] == "error":
+                    sidebar.update_download_item(video_id, 0, "error")
                     download_in_progress["value"] = False
                     status_text_rf.current.value = "Erro no download."
                     status_text_rf.current.color = ft.colors.ERROR
@@ -442,9 +473,9 @@ def download_content(page: ft.Page, sidebar):
             if current_input_value:
                 if clipboard_content != current_input_value:
                     dialog_open["value"] = True
-                    dlg_modal_rf.current.title.value = "Link Detectado no Clipboard"
+                    dlg_modal_rf.current.title.value = "Epa, link novo à vista!✨"
                     dlg_modal_rf.current.content.value = (
-                        "Deseja substituir o link atual pelo do clipboard?"
+                        "Vai querer atualizar com esse aí?"
                     )
                     dlg_modal_rf.current.actions = [
                         ft.TextButton(
