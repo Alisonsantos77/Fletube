@@ -1,7 +1,14 @@
+# main.py
+
 import logging
 import flet as ft
 from routes import setup_routes
-import os
+from services.send_feedback import (
+    retry_failed_feedbacks,
+    send_feedback_email,
+    clean_feedback_backup
+)
+
 # Configuração de logging
 logging.basicConfig(
     filename="logs/app.log",
@@ -40,14 +47,13 @@ def apply_saved_theme_and_font(page: ft.Page):
     # Forçar atualização para aplicar tema e fonte
     page.update()
 
-valores_venv = [
-    os.getenv("SUPABASE_URL"),
-    os.getenv("SUPABASE_KEY"),
-]
 
 def main(page: ft.Page):
     logging.info("Iniciando Fletube")
-    print(valores_venv)
+    
+
+    # Tenta enviar feedbacks locais ao iniciar
+    retry_failed_feedbacks(page)
 
     # Carregar e aplicar tema e fonte salvos antes de configurar a interface
     apply_saved_theme_and_font(page)
@@ -70,19 +76,14 @@ def main(page: ft.Page):
 
     # Configurar evento de teclado para atalhos de navegação
     def on_key_event(e: ft.KeyboardEvent):
-        logging.info(f"Tecla pressionada: {e.key}")
-        if e.key.lower() == "t":
+        if e.key.lower() == "f4":
             alternar_tema(None)
-        elif e.key == "F1":
-            page.go("/home")
-        elif e.key == "F2":
-            page.go("/questions")
-        elif e.key == "F3":
-            page.go("/about")
-        elif e.key == "F4":
-            page.go("/score")
-        elif e.key == "F5":
-            page.go("/quiz")
+        elif e.key.lower() == "f1":
+            page.go("/downloads")
+        elif e.key.lower() == "f2":
+            page.go("/historico")
+        elif e.key.lower() == "f3":
+            page.go("/configuracoes")
 
     page.on_keyboard_event = on_key_event
 
