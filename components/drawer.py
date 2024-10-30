@@ -2,9 +2,9 @@ import flet as ft
 
 
 def create_drawer(page: ft.Page):
-    theme = page.client_storage.get("theme_mode")
-    theme_icon = ft.icons.DARK_MODE if theme == "dark" else ft.icons.LIGHT_MODE
-
+    theme = (page.client_storage.get("theme_mode") or "LIGHT").upper()
+    theme_icon = ft.icons.DARK_MODE if theme == "DARK" else ft.icons.LIGHT_MODE
+    
     drawer_header = ft.Container(
         content=ft.Row(
             controls=[
@@ -27,7 +27,6 @@ def create_drawer(page: ft.Page):
         ),
         padding=ft.padding.symmetric(vertical=20, horizontal=15),
     )
-
 
     def open_info_dialog(e):
         info_dialog = ft.AlertDialog(
@@ -123,7 +122,6 @@ def create_drawer(page: ft.Page):
         info_dialog.open = True
         page.update()
 
-
     def close_info_dialog():
         for dialog in page.overlay:
             if isinstance(dialog, ft.AlertDialog):
@@ -159,7 +157,7 @@ def create_drawer(page: ft.Page):
                 ),
             ),
             ft.NavigationDrawerDestination(
-                label=f"Tema ({'Escuro' if theme == 'dark' else 'Claro'})",
+                label=f"Tema ({'Escuro' if theme == 'DARK' else 'Claro'})",
                 icon=theme_icon,
                 selected_icon_content=ft.Icon(theme_icon, color=ft.colors.BLUE_600),
             ),
