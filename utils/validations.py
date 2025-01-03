@@ -1,5 +1,12 @@
 import re
+import logging
 import flet as ft
+from datetime import datetime, timezone
+import pysnooper
+from services.supabase_utils import user_inative
+# Configura o logging
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 def validar_url_youtube(url: str) -> bool:
@@ -50,8 +57,50 @@ def validar_input(page: ft.Page, input_value: str) -> bool:
 
     if not validar_url_youtube(input_value.strip()):
         exibir_mensagem_erro(
-            page, "URL inválida. Por favor, insira um link válido do YouTube."
-        )
+            page, "URL inválida. Por favor, insira um link válido do YouTube.")
         return False
 
     return True
+
+
+@pysnooper.snoop()
+def verify_auth(page: ft.Page) -> bool:
+    """
+    Verifica a autenticação do usuário e a validade da assinatura.
+
+    Args:
+        page (ft.Page): A página atual da aplicação Flet.
+
+    Returns:
+        bool: True se o usuário estiver autenticado e a assinatura for válida, False caso contrário.
+    """
+    data_expiracao = page.client_storage.get("data_expiracao")
+
+    if data_expiracao:
+        # Converte a data_expiracao para datetime e adiciona o fuso horário UTC
+        data_expiracao = datetime.fromisoformat(
+            data_expiracao).replace(tzinfo=timezone.utc)
+        agora = datetime.now(timezone.utc)
+
+        if agora > data_expiracao:
+            page.client_storage.set("autenticado", False)
+            logging.info("Usuário expirado")
+            # Inativa o usuário no banco de dados
+            user_id = page.client_storage.get("user_id")
+            user_inative(user_id)
+            page.update()
+            page.go("/login")
+            return False
+        else:
+            # Caso a data de expiração seja válida, mostra os dias restantes
+            dias_restantes = (data_expiracao - agora).days
+            page.client_storage.set("dias_restantes", dias_restantes)
+            logging.info(f"Usuário autenticado. Dias restantes: {dias_restantes}")
+            return True
+    else:
+        # Se não encontrar a chave de expiração, desautentica o usuário
+        page.client_storage.set("autenticado", False)
+        logging.info("Usuário não autenticado")
+        page.update()
+        page.go("/login")
+        return False
