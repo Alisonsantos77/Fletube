@@ -1,157 +1,11 @@
-import os
-import logging
 import flet as ft
-from flet.auth.providers import GitHubOAuthProvider, GoogleOAuthProvider
-from flet.security import encrypt, decrypt
-from dotenv import load_dotenv
-
-# Carregar variáveis de ambiente do .env
-load_dotenv()
-
-# Variáveis de ambiente
-GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID")
-GITHUB_CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET")
-GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
-GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
-SECRET = os.getenv("SECRET")
-REDIRECT_URL = os.getenv("REDIRECT_URL")
-
-
-# Função de validação das variáveis de ambiente
-def check_env_vars(page: ft.Page):
-    missing_vars = []
-    required_vars = {
-        "GITHUB_CLIENT_ID": GITHUB_CLIENT_ID,
-        "GITHUB_CLIENT_SECRET": GITHUB_CLIENT_SECRET,
-        "GOOGLE_CLIENT_ID": GOOGLE_CLIENT_ID,
-        "GOOGLE_CLIENT_SECRET": GOOGLE_CLIENT_SECRET,
-        "SECRET": SECRET,
-        "REDIRECT_URL": REDIRECT_URL,
-    }
-    for var_name, var_value in required_vars.items():
-        if not var_value:
-            missing_vars.append(var_name)
-
-    if missing_vars:
-        missing_vars_message = (
-            "As seguintes variáveis de ambiente estão ausentes: "
-            + ", ".join(missing_vars)
-        )
-        snack_bar = ft.SnackBar(
-            content=ft.Text(missing_vars_message),
-            bgcolor=ft.colors.RED_ACCENT_200,
-        )
-        page.overlay.append(snack_bar)
-        snack_bar.open = True
-        page.update()
-        logging.error(missing_vars_message)
-        return False
-    return True
+from datetime import datetime, timezone
+from services.supabase_utils import validate_user, update_user_last_login
+import logging
 
 
 def LoginPage(page: ft.Page):
-    # Validação das variáveis de ambiente antes de prosseguir
-    if not check_env_vars(page):
-        return
-
-    github_provider = GitHubOAuthProvider(
-        client_id=GITHUB_CLIENT_ID,
-        client_secret=GITHUB_CLIENT_SECRET,
-        redirect_url=REDIRECT_URL,
-    )
-
-    google_provider = GoogleOAuthProvider(
-        client_id=GOOGLE_CLIENT_ID,
-        client_secret=GOOGLE_CLIENT_SECRET,
-        redirect_url=REDIRECT_URL,
-    )
-
-    # Função para tentar login automático
-    def attempt_auto_login(provider_name):
-        if provider_name == "github":
-            provider = github_provider
-            token_key = "github_token"
-            user_name_key = "github_user_name"
-        elif provider_name == "google":
-            provider = google_provider
-            token_key = "google_token"
-            user_name_key = "google_user_name"
-        else:
-            logging.error(f"Provedor desconhecido: {provider_name}")
-            return
-
-        encrypted_token = page.client_storage.get(token_key)
-        if encrypted_token:
-            try:
-                saved_token = decrypt(encrypted_token, SECRET)
-                account_name = (
-                    page.client_storage.get(user_name_key)
-                    or f"{provider_name.title()} User"
-                )
-                page.session.set("provider", provider_name)
-                # login com o token salvo
-                page.login(provider=provider, saved_token=saved_token)
-                logging.info(
-                    f"Tentativa de auto-login com {provider_name} para {account_name}"
-                )
-            except Exception as e:
-                logging.error(
-                    f"Erro ao descriptografar o token do {provider_name.title()}: {e}"
-                )
-                # Remove tokens inválidos
-                page.client_storage.remove(token_key)
-                page.client_storage.remove(user_name_key)
-        else:
-            logging.info(f"Nenhum token {provider_name.title()} encontrado.")
-
-    # Chama a função para tentar auto-login com GitHub e Google
-    attempt_auto_login("github")
-    attempt_auto_login("google")
-
-    def on_login(e: ft.LoginEvent):
-        if not e.error:
-            token = page.auth.token.to_json()
-            provider_name = page.session.get("provider")
-            account_name = page.auth.user.get("name", f"{provider_name.title()} User")
-            logging.info(f"Login bem-sucedido com {provider_name} para {account_name}")
-
-            encrypted_token = encrypt(token, SECRET)
-            if provider_name == "github":
-                page.client_storage.set("github_token", encrypted_token)
-                page.client_storage.set("github_user_name", account_name)
-            elif provider_name == "google":
-                page.client_storage.set("google_token", encrypted_token)
-                page.client_storage.set("google_user_name", account_name)
-            else:
-                logging.error(f"Provedor desconhecido durante o login: {provider_name}")
-
-            page.go("/downloads")  # Redireciona após login bem-sucedido
-        else:
-            logging.error(f"Erro no login: {e.error_description}")
-            provider_name = page.session.get("provider")
-            if provider_name == "github":
-                page.client_storage.remove("github_token")
-                page.client_storage.remove("github_user_name")
-            elif provider_name == "google":
-                page.client_storage.remove("google_token")
-                page.client_storage.remove("google_user_name")
-
-            page.snack_bar = ft.SnackBar(
-                ft.Text("Erro ao fazer login. Por favor, tente novamente."),
-                bgcolor=ft.colors.RED_ACCENT_200,
-            )
-            page.snack_bar.open = True
-            page.update()
-
-    page.on_login = on_login
-
-    def login_with_google(e):
-        page.session.set("provider", "google")
-        page.login(provider=google_provider)
-
-    def login_with_github(e):
-        page.session.set("provider", "github")
-        page.login(provider=github_provider)
+    page.title = "Fletube - Login"
 
     app_logo = ft.Image(
         src="/images/logo.png",
@@ -164,74 +18,115 @@ def LoginPage(page: ft.Page):
         value="Bem-vindo ao Fletube!",
         size=32,
         weight=ft.FontWeight.BOLD,
-        color=ft.colors.BLUE_GREY_800,
+        color=ft.Colors.BLUE_GREY_800,
         text_align=ft.TextAlign.CENTER,
     )
 
     login_description = ft.Text(
         value="Entre para acessar seus downloads e histórico!",
         size=16,
-        color=ft.colors.BLUE_GREY_600,
+        color=ft.Colors.BLUE_GREY_600,
         text_align=ft.TextAlign.CENTER,
     )
 
-    google_button = ft.ElevatedButton(
-        text="Continuar com Google",
-        content=ft.Row(
-            controls=[
-                ft.Image(src="/images/contact/google-logo.png", width=20, height=20),
-                ft.Text("Continuar com Google", size=16, color=ft.colors.BLACK),
-            ],
-            spacing=10,
-            alignment=ft.MainAxisAlignment.CENTER,
-        ),
-        style=ft.ButtonStyle(
-            bgcolor={
-                ft.ControlState.DEFAULT: ft.colors.WHITE,
-                ft.ControlState.HOVERED: ft.colors.WHITE,
-            },
-            color={ft.ControlState.DEFAULT: ft.colors.BLACK},
-            elevation={"pressed": 0, "": 1},
-            shape=ft.RoundedRectangleBorder(radius=8),
-        ),
-        on_click=login_with_google,
+    input_username = ft.TextField(
+        label="Nome de usuário",
+        hint_text="Digite seu nome de usuário",
+        border_color=ft.Colors.BLUE_GREY_300,
+        border_radius=8,
+        border_width=1,
         width=280,
     )
 
-    github_button = ft.ElevatedButton(
-        text="Continuar com GitHub",
-        content=ft.Row(
-            controls=[
-                ft.Image(
-                    src="/images/contact/icons8-github-64.png", width=20, height=20
-                ),
-                ft.Text("Continuar com GitHub", size=16, color=ft.colors.BLACK),
-            ],
-            spacing=10,
-            alignment=ft.MainAxisAlignment.CENTER,
-        ),
-        style=ft.ButtonStyle(
-            bgcolor={
-                ft.ControlState.DEFAULT: ft.colors.WHITE,
-                ft.ControlState.HOVERED: ft.colors.WHITE,
-            },
-            color={ft.ControlState.DEFAULT: ft.colors.BLACK},
-            elevation={"pressed": 0, "": 1},
-            shape=ft.RoundedRectangleBorder(radius=8),
-        ),
-        on_click=login_with_github,
+    input_senha = ft.TextField(
+        label="Senha", password=True,
+        can_reveal_password=True,
+        border_color=ft.Colors.BLUE_GREY_300,
+        border_radius=8,
+        border_width=1,
         width=280,
+    )
+
+
+    def on_login_click(e):
+        username = input_username.value
+        password = input_senha.value
+
+        status, user = validate_user(username, password)
+
+        if status == "success":
+            page.snack_bar = ft.SnackBar(
+                content=ft.Text("Login efetuado com sucesso!"),
+                bgcolor=ft.colors.GREEN_400,
+            )
+            page.snack_bar.open = True
+            page.update()
+            logging.info(f"Usuário encontrado: {user['username']}")
+            
+            # Horário atual
+            last_login = datetime.now(timezone.utc).isoformat()
+            update_user_last_login(user['id'], last_login)
+            # Device
+            device = page.client_storage.get("device")
+
+            # Armazenar os dados no client_storage
+            page.client_storage.set("user_id", user['id'])
+            page.client_storage.set("username", username)
+            page.client_storage.set("ultimo_login", last_login)
+            page.client_storage.set("data_expiracao", user['data_expiracao'])
+            page.client_storage.set("subscription_type", user['subscription_type'])
+            page.client_storage.set("user_status", user['status'])
+            page.client_storage.set("telefone", user['telefone'])
+            page.client_storage.set("autenticado", True)
+
+            # Criar uma lista com os valores que deseja armazenar
+            user_info_list = [
+                user['id'],
+                username,
+                last_login,
+                user['data_expiracao'],
+                user['subscription_type'],
+                user['telefone']
+            ]
+
+            # Armazenar a lista no client_storage
+            page.client_storage.set("user_info", user_info_list)
+
+            logging.info(f"Login de ID {user['id']} e username {user['username']} efetuado com sucesso.")
+            logging.info(f"Data de expiração: {user['data_expiracao']}")
+            logging.info(f"Tipo de assinatura: {user['subscription_type']}")
+            logging.info(f"Telefone: {user['telefone']}")
+            page.go("/downloads")
+
+        elif status == "inactive":
+            page.snack_bar = ft.SnackBar(
+                content=ft.Text(
+                    "Sua conta expirou. Entre em contato com o suporte."
+                ),
+                bgcolor=ft.colors.RED_400,
+            )
+            page.snack_bar.open = True
+            page.update()
+            logging.warning(f"Usuário {username} expirado.")
+        else:
+            page.snack_bar = ft.SnackBar(
+                content=ft.Text("Usuário ou senha inválidos."),
+                bgcolor=ft.colors.RED_400,
+            )
+            page.snack_bar.open = True
+            page.update()
+            logging.warning("Usuário ou senha inválidos.")
+        
+    login_button = ft.ElevatedButton(
+        text="Entrar",
+        on_click=on_login_click,
+        width=200,
     )
 
     login_content = ft.SafeArea(
         content=ft.Column(
-            controls=[
-                app_logo,
-                login_title,
-                login_description,
-                google_button,
-                github_button,
-            ],
+            controls=[app_logo, login_title, login_description,
+                      input_username, input_senha, login_button],
             alignment=ft.MainAxisAlignment.CENTER,
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             spacing=20,
