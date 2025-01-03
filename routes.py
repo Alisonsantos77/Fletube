@@ -9,11 +9,11 @@ from pages.feedback_page import FeedbackPage
 from components.drawer import create_drawer
 from components.user_menu import create_user_menu
 from services.download_manager import DownloadManager
-
 # Configurando o logging nativo
 logging.basicConfig(
     filename="logs/app.log",  # Arquivo de logs
-    format="%(asctime)s %(levelname)s: %(message)s",  # Formato das mensagens de log
+    # Formato das mensagens de log
+    format="%(asctime)s %(levelname)s: %(message)s",
     level=logging.INFO,  # Nível de log (INFO ou DEBUG, conforme necessário)
 )
 logging.getLogger("flet_core").setLevel(logging.INFO)
@@ -23,22 +23,36 @@ def setup_routes(page: ft.Page, download_manager: DownloadManager):
     logging.info("Configurando rotas")
 
     def route_change(route):
-        print(f"Rota alterada para: {route}")
+        logging.info(f"Rota alterada para: {route}")
         page.views.clear()
         page.title = "Downloads - Fletube"
         page.views.append(
-            ft.View(
-                route="/downloads",
-                scroll=ft.ScrollMode.AUTO,
-                drawer=create_drawer(page),
-                appbar=ft.AppBar(
-                    bgcolor=ft.colors.TRANSPARENT, actions=[create_user_menu(page)]
-                ),
-                controls=[DownloadPage(page, download_manager)],
+                ft.View(
+                    route="/downloads",
+                    scroll=ft.ScrollMode.AUTO,
+                    drawer=create_drawer(page),
+                    appbar=ft.AppBar(
+                        bgcolor=ft.colors.TRANSPARENT, actions=[
+                            create_user_menu(page)]
+                    ),
+                    controls=[DownloadPage(page, download_manager)],
+                )
             )
-        )
 
-        if page.route == "/historico":
+
+        if page.route == "/login":
+            page.title = "Login - Fletube"
+            page.views.append(
+                ft.View(
+                    route="/login",
+                    vertical_alignment=ft.MainAxisAlignment.CENTER,
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    controls=[LoginPage(page)],
+                    scroll=ft.ScrollMode.AUTO,
+                )
+            )
+
+        elif page.route == "/historico":
             page.title = "Histórico - Fletube"
             page.views.append(
                 ft.View(
@@ -83,7 +97,8 @@ def setup_routes(page: ft.Page, download_manager: DownloadManager):
                 )
             )
         elif route == "/404":
-            logging.warning(f"Rota desconhecida: {route}, redirecionando para 404")
+            logging.warning(f"Rota desconhecida: {
+                            route}, redirecionando para 404")
             page.views.append(
                 ft.View(
                     route="/404",
