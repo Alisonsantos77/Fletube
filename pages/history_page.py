@@ -53,7 +53,7 @@ def HistoryPage(page: ft.Page):
                 update_history_view()
                 snack_bar = ft.SnackBar(
                     content=ft.Text("Item excluído."),
-                    bgcolor=ft.colors.PRIMARY,
+                    bgcolor=ft.Colors.PRIMARY,
                     action="Desfazer",
                 )
                 snack_bar.on_action = lambda e: undo_delete(e)
@@ -64,7 +64,7 @@ def HistoryPage(page: ft.Page):
                 logger.error(f"Erro ao excluir o item: {ex}")
                 snack_bar = ft.SnackBar(
                     content=ft.Text("Erro ao excluir o item."),
-                    bgcolor=ft.colors.ERROR,
+                    bgcolor=ft.Colors.ERROR,
                 )
                 page.overlay.append(snack_bar)
                 snack_bar.open = True
@@ -77,7 +77,7 @@ def HistoryPage(page: ft.Page):
             update_history_view()
             snack_bar = ft.SnackBar(
                 content=ft.Text("Exclusão desfeita."),
-                bgcolor=ft.colors.PRIMARY,
+                bgcolor=ft.Colors.PRIMARY,
             )
             page.overlay.append(snack_bar)
             snack_bar.open = True
@@ -117,7 +117,7 @@ def HistoryPage(page: ft.Page):
                                 ft.Text(
                                     f"Formato: {item.get('format', 'Formato Indisponível')}",
                                     size=14,
-                                    color=ft.colors.ON_SURFACE_VARIANT,
+                                    color=ft.Colors.ON_SURFACE_VARIANT,
                                     weight=ft.FontWeight.W_600,
                                 ),
                                 ft.Row(
@@ -175,11 +175,11 @@ def HistoryPage(page: ft.Page):
             ),
             width=220,
             border_radius=ft.border_radius.all(8),
-            bgcolor=ft.colors.SURFACE,
+            bgcolor=ft.Colors.SURFACE,
             shadow=ft.BoxShadow(
                 spread_radius=1,
                 blur_radius=4,
-                color=ft.colors.with_opacity(0.2, ft.colors.BLACK),
+                color=ft.Colors.with_opacity(0.2, ft.Colors.BLACK),
                 offset=ft.Offset(0, 2),
             ),
             animate_scale=ft.Animation(300, ft.AnimationCurve.EASE_IN_OUT),
@@ -198,7 +198,7 @@ def HistoryPage(page: ft.Page):
         if not download_history:
             snack_bar = ft.SnackBar(
                 content=ft.Text("Nenhum item para excluir."),
-                bgcolor=ft.colors.ERROR,
+                bgcolor=ft.Colors.ERROR,
             )
             page.overlay.append(snack_bar)
             snack_bar.open = True
@@ -212,7 +212,7 @@ def HistoryPage(page: ft.Page):
             dlg_modal_rf.current.open = False
             snack_bar = ft.SnackBar(
                 content=ft.Text("Todos os itens foram excluídos."),
-                bgcolor=ft.colors.PRIMARY,
+                bgcolor=ft.Colors.PRIMARY,
                 action="Desfazer",
             )
             snack_bar.on_action = lambda e: undo_delete_all(
@@ -244,7 +244,7 @@ def HistoryPage(page: ft.Page):
         update_history_view()
         snack_bar = ft.SnackBar(
             content=ft.Text("Exclusão desfeita."),
-            bgcolor=ft.colors.PRIMARY,
+            bgcolor=ft.Colors.PRIMARY,
         )
         page.overlay.append(snack_bar)
         snack_bar.open = True
@@ -280,16 +280,16 @@ def HistoryPage(page: ft.Page):
     excluir_tudo_button = ft.ElevatedButton(
         text="Excluir Tudo",
         icon=ft.icons.DELETE_FOREVER,
-        bgcolor=ft.colors.ERROR,
-        color=ft.colors.ON_ERROR,
+        bgcolor=ft.Colors.ERROR,
+        color=ft.Colors.ON_ERROR,
         on_click=delete_all,
     )
 
     atualizar_lista_button = ft.ElevatedButton(
         text="Atualizar Lista",
         icon=ft.icons.UPDATE,
-        bgcolor=ft.colors.ON_PRIMARY_CONTAINER,
-        color=ft.colors.PRIMARY_CONTAINER,
+        bgcolor=ft.Colors.ON_PRIMARY_CONTAINER,
+        color=ft.Colors.PRIMARY_CONTAINER,
         on_click=update_history_view,
     )
 
@@ -349,7 +349,7 @@ def HistoryPage(page: ft.Page):
                     ],
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 ),
-                ft.Divider(height=2, color=ft.colors.OUTLINE),
+                ft.Divider(height=2, color=ft.Colors.OUTLINE),
                 ft.Container(
                     content=history_grid,
                     expand=True,  # Expande o Container que envolve o GridView
