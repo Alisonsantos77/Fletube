@@ -19,6 +19,8 @@ def handle_user_action(action, page):
         pass
 
 # Contador regressivo para exibir o tempo restante da assinatura do usuário
+
+
 class CountDown(ft.Text):
     def __init__(self, segundos):
         super().__init__()
@@ -45,7 +47,7 @@ class CountDown(ft.Text):
             self.value = f"{dias}d {horas}h {minutos}m {segundos}s"
             self.update()
             await asyncio.sleep(1)
-            self.segundos -= 1            
+            self.segundos -= 1
 
 
 def create_user_menu(page: ft.Page):
@@ -69,7 +71,7 @@ def create_user_menu(page: ft.Page):
                     ),
                     ft.Container(
                         content=ft.CircleAvatar(
-                            bgcolor=ft.Colors.GREEN, radius=5),
+                            bgcolor=ft.colors.GREEN, radius=5),
                         alignment=ft.alignment.bottom_left,
                     ),
                 ],
@@ -83,9 +85,9 @@ def create_user_menu(page: ft.Page):
                 content=ft.Row(
                     controls=[
                         ft.Icon(
-                            name=ft.Icons.PERSON_4_SHARP,
+                            name=ft.icons.PERSON_4_SHARP,
                             size=20,
-                            color=ft.Colors.BLUE_GREY_500,
+                            color=ft.colors.BLUE_GREY_500,
                         ),
                         ft.Text(
                             value=f"{username}",
@@ -99,9 +101,9 @@ def create_user_menu(page: ft.Page):
                 content=ft.Row(
                     controls=[
                         ft.Icon(
-                            name=ft.Icons.CALENDAR_MONTH_ROUNDED,
+                            name=ft.icons.CALENDAR_MONTH_ROUNDED,
                             size=20,
-                            color=ft.Colors.BLUE_GREY_500,
+                            color=ft.colors.BLUE_GREY_500,
                         ),
                         ft.Text(
                             value=f"{assinatura}",
@@ -113,11 +115,12 @@ def create_user_menu(page: ft.Page):
                 content=ft.Row(
                     controls=[
                         ft.Icon(
-                            name=ft.Icons.TIMER,
+                            name=ft.icons.TIMER,
                             size=20,
-                            color=ft.Colors.BLUE_GREY_500,
+                            color=ft.colors.BLUE_GREY_500,
                         ),
-                        CountDown(segundos=restantes * 86400) if restantes else ft.Text(value="Carregando...", size=14),
+                        CountDown(
+                            segundos=restantes * 86400) if restantes else ft.Text(value="Carregando...", size=14),
                     ]
                 ),
             ),
@@ -125,9 +128,9 @@ def create_user_menu(page: ft.Page):
                 content=ft.Row(
                     controls=[
                         ft.Icon(
-                            name=ft.Icons.SETTINGS,
+                            name=ft.icons.SETTINGS,
                             size=20,
-                            color=ft.Colors.BLUE_GREY_500,
+                            color=ft.colors.BLUE_GREY_500,
                         ),
                         ft.Text(
                             value="Configurações",
@@ -142,9 +145,9 @@ def create_user_menu(page: ft.Page):
                 content=ft.Row(
                     controls=[
                         ft.Icon(
-                            name=ft.Icons.LOGOUT_SHARP,
+                            name=ft.icons.LOGOUT_SHARP,
                             size=20,
-                            color=ft.Colors.RED,
+                            color=ft.colors.RED,
                         ),
                         ft.Text(
                             value="Sair",
