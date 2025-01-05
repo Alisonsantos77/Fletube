@@ -2,7 +2,6 @@ import re
 import logging
 import flet as ft
 from datetime import datetime, timezone
-import pysnooper
 from services.supabase_utils import user_inative
 # Configura o logging
 logging.basicConfig(level=logging.INFO,
@@ -63,7 +62,6 @@ def validar_input(page: ft.Page, input_value: str) -> bool:
     return True
 
 
-@pysnooper.snoop()
 def verify_auth(page: ft.Page) -> bool:
     """
     Verifica a autenticação do usuário e a validade da assinatura.
@@ -95,7 +93,8 @@ def verify_auth(page: ft.Page) -> bool:
             # Caso a data de expiração seja válida, mostra os dias restantes
             dias_restantes = (data_expiracao - agora).days
             page.client_storage.set("dias_restantes", dias_restantes)
-            logging.info(f"Usuário autenticado. Dias restantes: {dias_restantes}")
+            logging.info(f"Usuário autenticado. Dias restantes: {
+                         dias_restantes}")
             return True
     else:
         # Se não encontrar a chave de expiração, desautentica o usuário
@@ -104,3 +103,17 @@ def verify_auth(page: ft.Page) -> bool:
         page.update()
         page.go("/login")
         return False
+
+
+def validar_email(email: str) -> bool:
+    """
+    Valida se o e-mail fornecido tem um formato válido.
+
+    Args:
+        email (str): O e-mail a ser validado.
+
+    Returns:
+        bool: True se o e-mail for válido, False caso contrário.
+    """
+    email_regex = r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)"
+    return re.match(email_regex, email) is not None
