@@ -25,7 +25,7 @@ from utils.file_picker_utils import setup_file_picker
 from utils.extract_thumbnail import extract_thumbnail_url
 from utils.extract_title import extract_title_from_url
 from utils.validations import validar_input
-from services.download_manager import DownloadManager
+from services.download_manager import DownloadManager, download_in_progress
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +33,8 @@ logger = logging.getLogger(__name__)
 def download_content(
     page: ft.Page, sidebar: ft.Control, download_manager: DownloadManager
 ):
+
+    download_status = download_in_progress
     drop_format_rf = ft.Ref[ft.Dropdown]()
     img_downloader_rf = ft.Ref[ft.Image]()
     status_text_rf = ft.Ref[ft.Text]()
@@ -41,7 +43,6 @@ def download_content(
     input_link_rf = ft.Ref[ft.TextField]()
     dlg_modal_rf = ft.Ref[ft.AlertDialog]()
 
-    download_in_progress = {"value": False}
     dialog_open = {"value": False}
     last_clipboard_content = {"value": None}
 
@@ -78,15 +79,6 @@ def download_content(
             barra_progress_video_rf.current.visible = False
             barra_progress_video_rf.current.update()
 
-            snackbar = ft.SnackBar(
-                content=ft.Text("Thumbnail atualizada com sucesso!"),
-                bgcolor=ft.colors.PRIMARY,
-                action="OK",
-            )
-            snackbar.on_action = lambda e: None
-            page.overlay.append(snackbar)
-            snackbar.open = True
-            page.update()
         except ValueError as ve:
             status_text_rf.current.value = str(ve)
             status_text_rf.current.color = ft.colors.ERROR
@@ -109,7 +101,8 @@ def download_content(
     def on_directory_selected(directory_path):
         if directory_path:
             page.client_storage.set("download_directory", directory_path)
-            status_text_rf.current.value = f"Diretório selecionado: {directory_path}"
+            status_text_rf.current.value = f"Diretório selecionado: {
+                directory_path}"
             status_text_rf.current.color = ft.colors.PRIMARY
             status_text_rf.current.update()
             snackbar = ft.SnackBar(
@@ -123,7 +116,6 @@ def download_content(
             page.update()
 
     def iniciar_download_apos_selecionar_diretorio(diretorio):
-        download_in_progress["value"] = True
         link = input_link_rf.current.value.strip()
         format_dropdown = drop_format_rf.current.value
         page.client_storage.set("selected_format", format_dropdown)
@@ -141,19 +133,13 @@ def download_content(
             snackbar.open = True
             page.update()
 
-            input_link_rf.current.disabled = True
-            input_link_rf.current.update()
-            drop_format_rf.current.disabled = True
-            drop_format_rf.current.update()
-            download_button_rf.current.disabled = True
-            download_button_rf.current.update()
-
             barra_progress_video_rf.current.value = 0.0
             barra_progress_video_rf.current.visible = True
             barra_progress_video_rf.current.update()
 
             # Inicia o download através do DownloadManager
-            download_manager.iniciar_download(link, format_dropdown, diretorio, sidebar)
+            download_manager.iniciar_download(
+                link, format_dropdown, diretorio, sidebar, page)
 
         else:
             status_text_rf.current.value = (
@@ -162,7 +148,8 @@ def download_content(
             status_text_rf.current.color = ft.colors.ERROR
             status_text_rf.current.update()
             snackbar = ft.SnackBar(
-                content=ft.Text("Por favor, insira um link e escolha um formato."),
+                content=ft.Text(
+                    "Por favor, insira um link e escolha um formato."),
                 bgcolor=ft.colors.ERROR,
                 action="OK",
             )
@@ -185,7 +172,8 @@ def download_content(
                 thumbnail = download.get("thumbnail", "/images/logo.png")
                 file_path = download.get("file_path", "")
                 logger.info(
-                    f"Adicionando download: ID: {download_id}, Título: {title}, Formato: {format}, Thumbnail: {thumbnail}, Caminho: {file_path}"
+                    f"Adicionando download: ID: {download_id}, Título: {title}, Formato: {
+                        format}, Thumbnail: {thumbnail}, Caminho: {file_path}"
                 )
                 sidebar.add_download_item(
                     id=download_id,
@@ -197,19 +185,20 @@ def download_content(
         else:
             logger.warning("Nenhum download recuperado do client_storage.")
 
-    async def clipboard_reminder(page, status_text_rf, download_in_progress):
+    async def clipboard_reminder(page, status_text_rf, download_status):
         seconds = 60
         while seconds > 0:
-            if not download_in_progress["value"]:
+            if not download_status["value"]:
                 if status_text_rf.current is not None:
-                    status_text_rf.current.value = f"Copie o link e passe o mouse na tela dentro de {seconds} segundos."
+                    status_text_rf.current.value = f"Copie o link e passe o mouse na tela dentro de {
+                        seconds} segundos."
                     status_text_rf.current.update()
                 seconds -= 1
                 await asyncio.sleep(1)
             else:
                 break
         else:
-            if not download_in_progress["value"] and status_text_rf.current is not None:
+            if not download_status["value"] and status_text_rf.current is not None:
                 status_text_rf.current.value = "Faça o download do seu vídeo aqui!"
                 status_text_rf.current.update()
 
@@ -258,7 +247,7 @@ def download_content(
         if not clipboard_monitoring:
             return
 
-        if download_in_progress["value"] or dialog_open["value"]:
+        if download_status["value"] or dialog_open["value"]:
             return
         clipboard_content = page.get_clipboard()
         youtube_link_pattern = r"(https?://)?(www\.)?(youtube\.com|youtu\.be)/\S+"
@@ -268,7 +257,8 @@ def download_content(
             youtube_link_pattern, clipboard_content
         ):
             if clipboard_content == last_clipboard_content["value"]:
-                logger.info("Conteúdo do clipboard já foi processado anteriormente.")
+                logger.info(
+                    "Conteúdo do clipboard já foi processado anteriormente.")
                 return
 
             if current_input_value:
@@ -320,7 +310,7 @@ def download_content(
     input_link = ft.TextField(
         label="Digite o link do vídeo",
         width=400,
-        focused_border_color=ft.colors.ON_BACKGROUND,
+        focused_border_color=ft.colors.PRIMARY,
         focused_bgcolor=ft.colors.SECONDARY,
         cursor_color=ft.colors.ON_SURFACE,
         content_padding=ft.padding.all(10),
@@ -435,7 +425,8 @@ def download_content(
         clipboard_monitoring = page.client_storage.get("clipboard_monitoring")
         if clipboard_monitoring:
             page.run_async_task(
-                partial(clipboard_reminder, page, status_text_rf, download_in_progress)
+                partial(clipboard_reminder, page,
+                        status_text_rf, download_status)
             )
 
     container.on_layout = on_layout
