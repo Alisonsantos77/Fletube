@@ -5,6 +5,7 @@ import logging
 import os
 import re
 import requests
+from utils.validations import validar_email
 
 from services.send_feedback import send_feedback_email
 
@@ -19,12 +20,11 @@ logging.getLogger("flet_core").setLevel(logging.INFO)  # Log para flet_core
 logger = logging.getLogger(__name__)
 
 # Variáveis de ambiente
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 FEEDBACK_RECIPIENT_EMAIL = os.getenv("FEEDBACK_RECIPIENT_EMAIL")
 
 
 def FeedbackPage(page: ft.Page):
+    email_in_app = page.client_storage.get("email")
     """
     Página de feedback com sistema de avaliação em etapas.
     """
@@ -64,15 +64,15 @@ def FeedbackPage(page: ft.Page):
     def validate_current_step():
         if current_step[0] == 0:
             email = email_input.value.strip()
-            if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+            if not validar_email(email):
                 email_input.error_text = "Por favor, insira um e-mail válido."
                 email_input.update()
-                logger.warning("E-mail inválido inserido.")
+                logger.warning("E-mail inválido.")
                 return False
             else:
                 email_input.error_text = None
                 user_data["email"] = email
-                logger.info(f"E-mail validado: {email}")
+                logger.info(f"E-mail coletado: {email}")
                 return True
         elif current_step[0] == 1:
             if selected_rating[0] == 0:
@@ -156,6 +156,7 @@ def FeedbackPage(page: ft.Page):
         hint_text="exemplo@dominio.com",
         width=300,
         keyboard_type=ft.KeyboardType.EMAIL,
+        value=email_in_app if email_in_app else "",
     )
 
     step1 = ft.Column(
