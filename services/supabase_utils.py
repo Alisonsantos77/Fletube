@@ -2,7 +2,6 @@ import asyncio
 import os
 import logging
 import requests
-import pysnooper
 from dotenv import load_dotenv
 from datetime import datetime
 import pytz
