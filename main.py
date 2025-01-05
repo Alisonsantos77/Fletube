@@ -2,7 +2,6 @@ import asyncio
 import logging
 import time
 import flet as ft
-import pysnooper
 from routes import setup_routes
 from services.send_feedback import (
     retry_failed_feedbacks,
@@ -22,7 +21,6 @@ logging.basicConfig(
 logging.getLogger("flet_core").setLevel(logging.INFO)
 
 
-@pysnooper.snoop()
 def verificar_status_usuario(page):
     """
     Função que verifica o status do usuário, fazendo várias tentativas para acessar o 'user_id' no clientStorage e
@@ -41,10 +39,10 @@ def verificar_status_usuario(page):
     Exceções:
     Se ocorrer um erro durante o processo, ele será registrado no log.
     """
-    retries = 5  # Número máximo de tentativas
-    initial_delay = 5  # Atraso inicial de 1 segundo
+    retries = 5
+    initial_delay = 5
     max_delay = 32  # O backoff exponencial não deve exceder 32 segundos
-    delay = initial_delay  # Começa com 1 segundo
+    delay = initial_delay
 
     for attempt in range(retries):
         try:
@@ -95,6 +93,7 @@ def verificar_status_usuario(page):
             time.sleep(min(delay, max_delay))
             delay *= 2  # Dobra o tempo de espera a cada falha
 
+
 def apply_saved_theme_and_font(page: ft.Page):
     # Carregar e aplicar o tema salvo no client_storage
     theme_mode_value = page.client_storage.get("theme_mode") or "LIGHT"
@@ -122,10 +121,11 @@ def apply_saved_theme_and_font(page: ft.Page):
     logging.info(f"Fonte carregada: {font_family_value}")
 
     page.update()
-    
+
+
 def main(page: ft.Page):
     logging.info("Iniciando Fletube")
-    
+
     # Verificar se o usuário está autenticado
     if not verify_auth(page):
         logging.info("Usuário não autenticado")
@@ -136,10 +136,8 @@ def main(page: ft.Page):
         page.snack_bar.open = True
         page.go("/login")
 
-
     download_manager = DownloadManager(page)
 
-    
     # Tenta enviar feedbacks locais ao iniciar
     retry_failed_feedbacks(page)
 
@@ -190,7 +188,6 @@ def main(page: ft.Page):
 
     page.on_keyboard_event = on_key_event
 
-    # Atualizar a página final após todas as configurações
     page.update()
 
 
