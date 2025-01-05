@@ -18,21 +18,21 @@ def LoginPage(page: ft.Page):
         value="Bem-vindo ao Fletube!",
         size=32,
         weight=ft.FontWeight.BOLD,
-        color=ft.Colors.BLUE_GREY_800,
+        color=ft.colors.BLUE_GREY_800,
         text_align=ft.TextAlign.CENTER,
     )
 
     login_description = ft.Text(
         value="Entre para acessar seus downloads e histórico!",
         size=16,
-        color=ft.Colors.BLUE_GREY_600,
+        color=ft.colors.BLUE_GREY_600,
         text_align=ft.TextAlign.CENTER,
     )
 
     input_username = ft.TextField(
         label="Nome de usuário",
         hint_text="Digite seu nome de usuário",
-        border_color=ft.Colors.BLUE_GREY_300,
+        border_color=ft.colors.BLUE_GREY_300,
         border_radius=8,
         border_width=1,
         width=280,
@@ -41,12 +41,11 @@ def LoginPage(page: ft.Page):
     input_senha = ft.TextField(
         label="Senha", password=True,
         can_reveal_password=True,
-        border_color=ft.Colors.BLUE_GREY_300,
+        border_color=ft.colors.BLUE_GREY_300,
         border_radius=8,
         border_width=1,
         width=280,
     )
-
 
     def on_login_click(e):
         username = input_username.value
@@ -62,21 +61,21 @@ def LoginPage(page: ft.Page):
             page.snack_bar.open = True
             page.update()
             logging.info(f"Usuário encontrado: {user['username']}")
-            
+
             # Horário atual
             last_login = datetime.now(timezone.utc).isoformat()
             update_user_last_login(user['id'], last_login)
-            # Device
-            device = page.client_storage.get("device")
 
             # Armazenar os dados no client_storage
             page.client_storage.set("user_id", user['id'])
             page.client_storage.set("username", username)
             page.client_storage.set("ultimo_login", last_login)
             page.client_storage.set("data_expiracao", user['data_expiracao'])
-            page.client_storage.set("subscription_type", user['subscription_type'])
+            page.client_storage.set(
+                "subscription_type", user['subscription_type'])
             page.client_storage.set("user_status", user['status'])
             page.client_storage.set("telefone", user['telefone'])
+            page.client_storage.set("email", user['email'])
             page.client_storage.set("autenticado", True)
 
             # Criar uma lista com os valores que deseja armazenar
@@ -86,16 +85,13 @@ def LoginPage(page: ft.Page):
                 last_login,
                 user['data_expiracao'],
                 user['subscription_type'],
-                user['telefone']
+                user['telefone'],
+                user['email'],
             ]
 
             # Armazenar a lista no client_storage
             page.client_storage.set("user_info", user_info_list)
-
-            logging.info(f"Login de ID {user['id']} e username {user['username']} efetuado com sucesso.")
-            logging.info(f"Data de expiração: {user['data_expiracao']}")
-            logging.info(f"Tipo de assinatura: {user['subscription_type']}")
-            logging.info(f"Telefone: {user['telefone']}")
+            logging.info(f"Dados coletados: {user_info_list} ")
             page.go("/downloads")
 
         elif status == "inactive":
@@ -104,6 +100,11 @@ def LoginPage(page: ft.Page):
                     "Sua conta expirou. Entre em contato com o suporte."
                 ),
                 bgcolor=ft.colors.RED_400,
+                # Falar com suporte
+                action="Falar com suporte",
+                on_action=lambda _: page.launch_url(
+                    "https://wa.link/tr8dei"
+                ),
             )
             page.snack_bar.open = True
             page.update()
@@ -116,7 +117,7 @@ def LoginPage(page: ft.Page):
             page.snack_bar.open = True
             page.update()
             logging.warning("Usuário ou senha inválidos.")
-        
+
     login_button = ft.ElevatedButton(
         text="Entrar",
         on_click=on_login_click,
@@ -125,8 +126,14 @@ def LoginPage(page: ft.Page):
 
     login_content = ft.SafeArea(
         content=ft.Column(
-            controls=[app_logo, login_title, login_description,
-                      input_username, input_senha, login_button],
+            controls=[
+                app_logo,
+                login_title,
+                login_description,
+                input_username,
+                input_senha,
+                login_button
+            ],
             alignment=ft.MainAxisAlignment.CENTER,
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             spacing=20,
