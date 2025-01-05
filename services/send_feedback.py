@@ -24,8 +24,8 @@ logging.basicConfig(
 logging.getLogger("flet_core").setLevel(logging.INFO)
 
 # Variáveis de configuração
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+SUPABASE_URL = os.getenv("SUPABASE_URL_USERS")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY_USERS")
 FEEDBACK_RECIPIENT_EMAIL = os.getenv("FEEDBACK_RECIPIENT_EMAIL")
 SMTP_SERVER = os.getenv("SMTP_SERVER")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
@@ -91,7 +91,8 @@ def sync_local_feedback(page: ft.Page):
         for feedback in backups:
             # Verifica se o feedback é um dicionário antes de tentar acessar as chaves
             if not isinstance(feedback, dict):
-                logging.warning("Formato inválido de feedback no arquivo de backup.")
+                logging.warning(
+                    "Formato inválido de feedback no arquivo de backup.")
                 continue  # Ignora itens com formato incorreto
 
             feedback_data = {
@@ -114,14 +115,17 @@ def sync_local_feedback(page: ft.Page):
                 )
 
                 if res_supabase.status_code in [200, 201]:
-                    logging.info(f"Feedback sincronizado com sucesso: {feedback_data}")
+                    logging.info(f"Feedback sincronizado com sucesso: {
+                                 feedback_data}")
                     successfully_synced.append(feedback)
                 else:
-                    error_message = f"Erro ao sincronizar feedback: {res_supabase.status_code}, {res_supabase.text}"
+                    error_message = f"Erro ao sincronizar feedback: {
+                        res_supabase.status_code}, {res_supabase.text}"
                     logging.error(error_message)
 
             except Exception as e:
-                logging.error(f"Erro ao sincronizar feedback para o Supabase: {e}")
+                logging.error(
+                    f"Erro ao sincronizar feedback para o Supabase: {e}")
 
         # Remover feedbacks sincronizados com sucesso
         backups = [fb for fb in backups if fb not in successfully_synced]
@@ -171,7 +175,7 @@ def send_feedback_email(user_email, user_message, page: ft.Page):
         "category": user_message.get("category", ""),
         "subcategory": user_message.get("subcategory", ""),
         "feedback_text": user_message.get("feedback_text", ""),
-        "timestamp": datetime.utcnow().isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat(),
     }
 
     try:
@@ -191,7 +195,8 @@ def send_feedback_email(user_email, user_message, page: ft.Page):
             logging.info("Feedback armazenado no Supabase com sucesso.")
         else:
             logging.error(
-                f"Erro ao armazenar feedback no Supabase: {res_supabase.status_code}, {res_supabase.text}"
+                f"Erro ao armazenar feedback no Supabase: {
+                    res_supabase.status_code}, {res_supabase.text}"
             )
             save_feedback_locally(feedback_data)
             return False
@@ -225,7 +230,8 @@ def send_feedback_email(user_email, user_message, page: ft.Page):
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
             server.starttls()
             server.login(EMAIL_USER, EMAIL_PASSWORD)
-            server.sendmail(EMAIL_USER, FEEDBACK_RECIPIENT_EMAIL, msg.as_string())
+            server.sendmail(
+                EMAIL_USER, FEEDBACK_RECIPIENT_EMAIL, msg.as_string())
 
         logging.info("Feedback enviado por e-mail com sucesso.")
         return True
