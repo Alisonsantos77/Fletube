@@ -27,18 +27,17 @@ def setup_routes(page: ft.Page, download_manager: DownloadManager):
         page.views.clear()
         page.title = "Downloads - Fletube"
         page.views.append(
-                ft.View(
-                    route="/downloads",
-                    scroll=ft.ScrollMode.AUTO,
-                    drawer=create_drawer(page),
-                    appbar=ft.AppBar(
-                        bgcolor=ft.colors.TRANSPARENT, actions=[
-                            create_user_menu(page)]
-                    ),
-                    controls=[DownloadPage(page, download_manager)],
-                )
+            ft.View(
+                route="/downloads",
+                scroll=ft.ScrollMode.AUTO,
+                drawer=create_drawer(page),
+                appbar=ft.AppBar(
+                    bgcolor=ft.Colors.TRANSPARENT, actions=[
+                        create_user_menu(page)]
+                ),
+                controls=[DownloadPage(page, download_manager)],
             )
-
+        )
 
         if page.route == "/login":
             page.title = "Login - Fletube"
@@ -59,7 +58,7 @@ def setup_routes(page: ft.Page, download_manager: DownloadManager):
                     drawer=create_drawer(page),
                     route="/historico",
                     appbar=ft.AppBar(
-                        bgcolor=ft.colors.TRANSPARENT,
+                        bgcolor=ft.Colors.TRANSPARENT,
                         actions=[create_user_menu(page)],
                     ),
                     controls=[HistoryPage(page)],
@@ -74,7 +73,7 @@ def setup_routes(page: ft.Page, download_manager: DownloadManager):
                     route="/configuracoes",
                     drawer=create_drawer(page),
                     appbar=ft.AppBar(
-                        bgcolor=ft.colors.TRANSPARENT,
+                        bgcolor=ft.Colors.TRANSPARENT,
                         actions=[create_user_menu(page)],
                     ),
                     controls=[SettingsPage(page)],
@@ -90,7 +89,7 @@ def setup_routes(page: ft.Page, download_manager: DownloadManager):
                     vertical_alignment=ft.MainAxisAlignment.CENTER,
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     appbar=ft.AppBar(
-                        bgcolor=ft.colors.TRANSPARENT,
+                        bgcolor=ft.Colors.TRANSPARENT,
                         actions=[create_user_menu(page)],
                     ),
                     controls=[FeedbackPage(page)],

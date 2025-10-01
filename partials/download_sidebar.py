@@ -19,11 +19,11 @@ class SidebarList(ft.Container):
                             0} | 📊 Total: {0} ",
                         size=16,
                         weight=ft.FontWeight.BOLD,
-                        color=ft.colors.BLUE_GREY_900,
+                        color=ft.Colors.BLUE_GREY_900,
                         text_align=ft.TextAlign.CENTER,
                         key="downloads_title",
                     ),
-                    ft.Divider(thickness=2, color=ft.colors.BLUE_GREY_300),
+                    ft.Divider(thickness=2, color=ft.Colors.BLUE_GREY_300),
                     ft.Column(
                         controls=[],
                         scroll=ft.ScrollMode.AUTO,
@@ -52,7 +52,7 @@ class SidebarList(ft.Container):
         """Atualiza a cor do título baseado no tema armazenado no client storage."""
         if self.page:
             theme_mode = self.page.client_storage.get("theme_mode", "light")
-            self.title_control.color = ft.colors.BLUE_700 if theme_mode == "light" else ft.colors.WHITE
+            self.title_control.color = ft.Colors.BLUE_700 if theme_mode == "light" else ft.Colors.WHITE
             self.title_control.animate_opacity = 500
             self.title_control.update()
         else:
@@ -79,11 +79,11 @@ class SidebarList(ft.Container):
                 width=50, height=50, border_radius=ft.border_radius.all(5), animate_opacity=500, opacity=1,
             ),
             title=ft.Text(value=title, size=18, weight=ft.FontWeight.BOLD,
-                          color=ft.colors.LIGHT_BLUE_800, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
+                          color=ft.Colors.LIGHT_BLUE_800, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
             subtitle=ft.Text(value=f"Formato: {
-                             subtitle}", size=14, color=ft.colors.LIGHT_BLUE_600),
+                             subtitle}", size=14, color=ft.Colors.LIGHT_BLUE_600),
             trailing=ft.Container(content=ft.Icon(
-                name=ft.icons.INFO, color=ft.colors.BLUE_500), animate_opacity=500, opacity=1),
+                name=ft.Icons.INFO, color=ft.Colors.BLUE_500), animate_opacity=500, opacity=1),
             data={"id": id, "status": "pending", "file_path": file_path},
             on_click=lambda e, id=id: self.on_item_click(id),
             animate_opacity=500,
@@ -116,24 +116,24 @@ class SidebarList(ft.Container):
             try:
                 if status == "downloading":
                     item.trailing.content = ft.Text(
-                        f"{progress*100:.2f}%", size=14, color=ft.colors.BLUE_700)
+                        f"{progress*100:.2f}%", size=14, color=ft.Colors.BLUE_700)
                     item.data["status"] = "downloading"
                 elif status == "converting":
                     item.trailing.content = ft.Text(
-                        f"{progress*100:.2f}%", size=14, color=ft.colors.BLUE_700)
+                        f"{progress*100:.2f}%", size=14, color=ft.Colors.BLUE_700)
                     item.data["status"] = "converting"
                 elif status == "pending":
                     item.trailing.content = ft.Icon(
-                        name=ft.icons.INFO, color=ft.colors.BLUE_500)
+                        name=ft.Icons.INFO, color=ft.Colors.BLUE_500)
                     item.data["status"] = "pending"
                     item.trailing.content.value = "📥 "
                 elif status == "finished":
                     item.trailing.content = ft.Icon(
-                        name=ft.icons.CHECK, color=ft.colors.GREEN)
+                        name=ft.Icons.CHECK, color=ft.Colors.GREEN)
                     item.data["status"] = "finished"
                 elif status == "error":
                     item.trailing.content = ft.Icon(
-                        name=ft.icons.ERROR, color=ft.colors.RED)
+                        name=ft.Icons.ERROR, color=ft.Colors.RED)
                     item.data["status"] = "error"
                 item.update()
 
@@ -158,7 +158,7 @@ class SidebarList(ft.Container):
         # Atualiza o título com as contagens (finalizados, falhas e total)
         self.title_control.value = f"✅ Concluídos: {
             finished} | ❌ Falhas: {errors} | 📊 Total: {total}"
-        self.title_control.color = ft.colors.BLUE_700
+        self.title_control.color = ft.Colors.BLUE_700
         self.title_control.animate_opacity = 500
         self.title_control.update()
 

@@ -3,8 +3,8 @@ import flet as ft
 
 def create_drawer(page: ft.Page):
     theme = (page.client_storage.get("theme_mode") or "LIGHT").upper()
-    theme_icon = ft.icons.DARK_MODE if theme == "DARK" else ft.icons.LIGHT_MODE
-    
+    theme_icon = ft.Icons.DARK_MODE if theme == "DARK" else ft.Icons.LIGHT_MODE
+
     drawer_header = ft.Container(
         content=ft.Row(
             controls=[
@@ -12,7 +12,7 @@ def create_drawer(page: ft.Page):
                     "Fletube",
                     size=28,
                     weight=ft.FontWeight.BOLD,
-                    color=ft.colors.BLUE_600,
+                    color=ft.Colors.BLUE_600,
                     expand=True,
                     text_align=ft.TextAlign.LEFT,
                 ),
@@ -39,12 +39,13 @@ def create_drawer(page: ft.Page):
                         icon=ft.icons.CLOSE,
                         tooltip="Fechar",
                         on_click=lambda e: close_info_dialog(),
-                        icon_color=ft.colors.RED,
+                        icon_color=ft.Colors.RED,
                     ),
                 ],
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             ),
-            content=ft.Text("Entre em contato ou acesse minhas redes sociais:", size=16),
+            content=ft.Text(
+                "Entre em contato ou acesse minhas redes sociais:", size=16),
             actions=[
                 ft.Row(
                     controls=[
@@ -54,13 +55,13 @@ def create_drawer(page: ft.Page):
                                 width=40,
                                 height=40,
                             ),
-                            icon_color=ft.colors.GREEN,
+                            icon_color=ft.Colors.GREEN,
                             tooltip="Abrir WhatsApp",
                             url="https://wa.link/oebrg2",
                             style=ft.ButtonStyle(
                                 overlay_color={
-                                    "": ft.colors.TRANSPARENT,
-                                    "hovered": ft.colors.GREEN,
+                                    "": ft.Colors.TRANSPARENT,
+                                    "hovered": ft.Colors.GREEN,
                                 },
                             ),
                         ),
@@ -70,13 +71,13 @@ def create_drawer(page: ft.Page):
                                 width=40,
                                 height=40,
                             ),
-                            icon_color=ft.colors.PRIMARY,
+                            icon_color=ft.Colors.PRIMARY,
                             tooltip="Enviar Email",
                             url="mailto:Alisondev77@hotmail.com?subject=Feedback%20-%20MultiTools&body=Olá, gostaria de fornecer feedback.",
                             style=ft.ButtonStyle(
                                 overlay_color={
-                                    "": ft.colors.TRANSPARENT,
-                                    "hovered": ft.colors.BLUE,
+                                    "": ft.Colors.TRANSPARENT,
+                                    "hovered": ft.Colors.BLUE,
                                 },
                             ),
                         ),
@@ -90,8 +91,8 @@ def create_drawer(page: ft.Page):
                             url="https://www.linkedin.com/in/alisonsantosdev",
                             style=ft.ButtonStyle(
                                 overlay_color={
-                                    "": ft.colors.TRANSPARENT,
-                                    "hovered": ft.colors.BLUE,
+                                    "": ft.Colors.TRANSPARENT,
+                                    "hovered": ft.Colors.BLUE,
                                 },
                             ),
                         ),
@@ -101,13 +102,13 @@ def create_drawer(page: ft.Page):
                                 width=40,
                                 height=40,
                             ),
-                            icon_color=ft.colors.PRIMARY,
+                            icon_color=ft.Colors.PRIMARY,
                             tooltip="Acessar GitHub",
                             url="https://github.com/Alisonsantos77",
                             style=ft.ButtonStyle(
                                 overlay_color={
-                                    "": ft.colors.TRANSPARENT,
-                                    "hovered": ft.colors.GREY,
+                                    "": ft.Colors.TRANSPARENT,
+                                    "hovered": ft.Colors.GREY,
                                 },
                             ),
                         ),
@@ -134,32 +135,33 @@ def create_drawer(page: ft.Page):
             ft.Container(expand=True),
             ft.NavigationDrawerDestination(
                 label="Downloads",
-                icon=ft.icons.DOWNLOAD_OUTLINED,
-                selected_icon_content=ft.FilledButton(
+                icon=ft.Icons.DOWNLOAD_OUTLINED,
+                selected_icon=ft.FilledButton(
                     text="Downloads",
-                    icon=ft.icons.DOWNLOAD,
+                    icon=ft.Icons.DOWNLOAD,
                 ),
             ),
             ft.NavigationDrawerDestination(
                 label="Histórico",
-                icon=ft.icons.HISTORY_TOGGLE_OFF_OUTLINED,
-                selected_icon_content=ft.FilledButton(
+                icon=ft.Icons.HISTORY_TOGGLE_OFF_OUTLINED,
+                selected_icon=ft.FilledButton(
                     text="Histórico",
-                    icon=ft.icons.HISTORY,
+                    icon=ft.Icons.HISTORY,
                 ),
             ),
             ft.NavigationDrawerDestination(
                 label="Configurações",
-                icon=ft.icons.SETTINGS_OUTLINED,
-                selected_icon_content=ft.FilledButton(
+                icon=ft.Icons.SETTINGS_OUTLINED,
+                selected_icon=ft.FilledButton(
                     text="Configurações",
-                    icon=ft.icons.SETTINGS,
+                    icon=ft.Icons.SETTINGS,
                 ),
             ),
             ft.NavigationDrawerDestination(
                 label=f"Tema ({'Escuro' if theme == 'DARK' else 'Claro'})",
                 icon=theme_icon,
-                selected_icon_content=ft.Icon(theme_icon, color=ft.colors.BLUE_600),
+                selected_icon=ft.Icon(
+                    theme_icon, color=ft.Colors.BLUE_600),
             ),
             ft.Divider(height=1),
             ft.Container(
@@ -167,10 +169,10 @@ def create_drawer(page: ft.Page):
                     controls=[
                         ft.Text("Desenvolvido por Alison Santos", size=14),
                         ft.IconButton(
-                            icon=ft.icons.INFO_OUTLINED,
+                            icon=ft.Icons.INFO_OUTLINED,
                             on_click=open_info_dialog,
                             tooltip="Informações",
-                            icon_color=ft.colors.GREY,
+                            icon_color=ft.Colors.GREY,
                         ),
                     ],
                     alignment=ft.MainAxisAlignment.CENTER,

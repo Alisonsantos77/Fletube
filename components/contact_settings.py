@@ -1,5 +1,6 @@
 import flet as ft
 
+
 def ContactSettings():
     return ft.Container(
         padding=20,
@@ -9,13 +10,13 @@ def ContactSettings():
                     "Contatos",
                     size=24,
                     weight=ft.FontWeight.BOLD,
-                    color=ft.colors.ON_SURFACE,
+                    color=ft.Colors.ON_SURFACE,
                 ),
                 ft.Text(
                     "Entre em contato conosco através dos meios abaixo:",
                     size=16,
                     text_align=ft.TextAlign.JUSTIFY,
-                    color=ft.colors.ON_SURFACE,
+                    color=ft.Colors.ON_SURFACE,
                 ),
                 ft.Row(
                     controls=[
@@ -25,13 +26,13 @@ def ContactSettings():
                                 width=40,
                                 height=40,
                             ),
-                            icon_color=ft.colors.PRIMARY,
+                            icon_color=ft.Colors.PRIMARY,
                             tooltip="Abrir WhatsApp",
                             url="https://wa.link/oebrg2",
                             style=ft.ButtonStyle(
                                 overlay_color={
-                                    "": ft.colors.TRANSPARENT,
-                                    "hovered": ft.colors.GREEN,
+                                    "": ft.Colors.TRANSPARENT,
+                                    "hovered": ft.Colors.GREEN,
                                 },
                             ),
                         ),
@@ -41,13 +42,13 @@ def ContactSettings():
                                 width=40,
                                 height=40,
                             ),
-                            icon_color=ft.colors.PRIMARY,
+                            icon_color=ft.Colors.PRIMARY,
                             tooltip="Enviar Email",
                             url="mailto:Alisondev77@hotmail.com?subject=Feedback%20-%20MultiTools&body=Olá, gostaria de fornecer feedback.",
                             style=ft.ButtonStyle(
                                 overlay_color={
-                                    "": ft.colors.TRANSPARENT,
-                                    "hovered": ft.colors.BLUE,
+                                    "": ft.Colors.TRANSPARENT,
+                                    "hovered": ft.Colors.BLUE,
                                 },
                             ),
                         ),
@@ -61,8 +62,8 @@ def ContactSettings():
                             url="https://www.linkedin.com/in/alisonsantosdev",
                             style=ft.ButtonStyle(
                                 overlay_color={
-                                    "": ft.colors.TRANSPARENT,
-                                    "hovered": ft.colors.BLUE,
+                                    "": ft.Colors.TRANSPARENT,
+                                    "hovered": ft.Colors.BLUE,
                                 },
                             ),
                         ),
@@ -72,13 +73,13 @@ def ContactSettings():
                                 width=40,
                                 height=40,
                             ),
-                            icon_color=ft.colors.PRIMARY,
+                            icon_color=ft.Colors.PRIMARY,
                             tooltip="Acessar GitHub",
                             url="https://github.com/Alisonsantos77",
                             style=ft.ButtonStyle(
                                 overlay_color={
-                                    "": ft.colors.TRANSPARENT,
-                                    "hovered": ft.colors.GREY,
+                                    "": ft.Colors.TRANSPARENT,
+                                    "hovered": ft.Colors.GREY,
                                 },
                             ),
                         ),

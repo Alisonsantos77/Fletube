@@ -1,18 +1,16 @@
-# send_feedback.py
-
+import os
 import json
+import re
+import logging
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-import logging
-import os
-from dotenv import load_dotenv
-import requests
-import flet as ft
-import re
 from datetime import datetime, timezone
 
-# Carregar variáveis de ambiente
+import requests
+import flet as ft
+from dotenv import load_dotenv
+
 load_dotenv()
 
 # Configuração de logging
@@ -33,22 +31,45 @@ EMAIL_USER = os.getenv("EMAIL_USER")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 
 
-def is_valid_email(email):
+def _get_supabase_headers() -> dict:
+    """
+    Retorna os headers padrão para requisições ao Supabase.
+    """
+    return {
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "Content-Type": "application/json",
+        "Prefer": "return=representation",
+    }
+
+
+def is_valid_email(email: str) -> bool:
     """
     Verifica se o email está no formato correto.
+
+    Args:
+        email: Endereço de email a ser validado.
+
+    Returns:
+        True se o email for válido, False caso contrário.
     """
     email_regex = r"(^[\w\.\-]+@[\w\-]+\.[a-zA-Z]{2,}$)"
     return re.match(email_regex, email) is not None
 
 
-def save_feedback_locally(feedback_data):
+def save_feedback_locally(feedback_data: dict) -> None:
+    """
+    Salva feedback localmente em caso de falha na comunicação com o Supabase.
+
+    Args:
+        feedback_data: Dicionário contendo os dados do feedback.
+    """
     backup_file = "feedback_backup.json"
     try:
+        backups = []
         if os.path.exists(backup_file) and os.path.getsize(backup_file) > 0:
             with open(backup_file, "r", encoding="utf-8") as file:
                 backups = json.load(file)
-        else:
-            backups = []
 
         feedback_data["created_at"] = datetime.now(timezone.utc).isoformat()
         backups.append(feedback_data)
@@ -61,9 +82,12 @@ def save_feedback_locally(feedback_data):
         logging.error(f"Erro ao salvar feedback localmente: {e}")
 
 
-def sync_local_feedback(page: ft.Page):
+def sync_local_feedback(page: ft.Page) -> None:
     """
-    Tenta sincronizar os feedbacks salvos localmente com o Supabase.
+    Sincroniza feedbacks salvos localmente com o Supabase.
+
+    Args:
+        page: Página Flet atual.
     """
     backup_file = "feedback_backup.json"
     if not os.path.exists(backup_file):
@@ -79,21 +103,13 @@ def sync_local_feedback(page: ft.Page):
             return
 
         supabase_endpoint = f"{SUPABASE_URL}/rest/v1/feedbacks"
-        headers_supabase = {
-            "apikey": SUPABASE_KEY,
-            "Authorization": f"Bearer {SUPABASE_KEY}",
-            "Content-Type": "application/json",
-            "Prefer": "return=representation",
-        }
-
         successfully_synced = []
 
         for feedback in backups:
-            # Verifica se o feedback é um dicionário antes de tentar acessar as chaves
             if not isinstance(feedback, dict):
                 logging.warning(
                     "Formato inválido de feedback no arquivo de backup.")
-                continue  # Ignora itens com formato incorreto
+                continue
 
             feedback_data = {
                 "email": feedback.get("email", ""),
@@ -101,67 +117,72 @@ def sync_local_feedback(page: ft.Page):
                 "category": feedback.get("category", ""),
                 "subcategory": feedback.get("subcategory", ""),
                 "feedback_text": feedback.get("feedback_text", ""),
-                "created_at": datetime.now(
-                    timezone.utc
-                ).isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
             }
 
             try:
-                res_supabase = requests.post(
+                response = requests.post(
                     supabase_endpoint,
-                    headers=headers_supabase,
+                    headers=_get_supabase_headers(),
                     json=feedback_data,
                     timeout=10,
                 )
 
-                if res_supabase.status_code in [200, 201]:
-                    logging.info(f"Feedback sincronizado com sucesso: {
-                                 feedback_data}")
+                if response.status_code in [200, 201]:
+                    logging.info(
+                        f"Feedback sincronizado com sucesso: {feedback_data}")
                     successfully_synced.append(feedback)
                 else:
-                    error_message = f"Erro ao sincronizar feedback: {
-                        res_supabase.status_code}, {res_supabase.text}"
-                    logging.error(error_message)
-
+                    logging.error(
+                        f"Erro ao sincronizar feedback: {response.status_code}, {response.text}"
+                    )
             except Exception as e:
                 logging.error(
                     f"Erro ao sincronizar feedback para o Supabase: {e}")
 
-        # Remover feedbacks sincronizados com sucesso
         backups = [fb for fb in backups if fb not in successfully_synced]
 
-        # Atualizar o arquivo de backup
         with open(backup_file, "w", encoding="utf-8") as file:
             json.dump(backups, file, ensure_ascii=False, indent=4)
 
         if not backups:
-            os.remove(backup_file)  # Remove o arquivo se estiver vazio
+            os.remove(backup_file)
             logging.info(
-                "Todos os feedbacks locais foram sincronizados e o arquivo de backup foi removido."
-            )
+                "Todos os feedbacks locais foram sincronizados e o backup removido.")
         else:
             logging.info("Alguns feedbacks ainda precisam ser reenviados.")
     except Exception as e:
         logging.error(f"Erro ao sincronizar feedbacks locais: {e}")
 
 
-def retry_failed_feedbacks(page: ft.Page):
+def retry_failed_feedbacks(page: ft.Page) -> None:
     """
     Retenta enviar feedbacks locais ao iniciar a aplicação.
+
+    Args:
+        page: Página Flet atual.
     """
     sync_local_feedback(page)
 
 
-def send_feedback_email(user_email, user_message, page: ft.Page):
+def send_feedback_email(user_email: str, user_message: dict, page: ft.Page) -> bool:
     """
-    Envia um email de feedback e armazena os dados no Supabase.
+    Envia feedback por email e armazena no Supabase.
+    Salva localmente em caso de falha.
+
+    Args:
+        user_email: Email do usuário.
+        user_message: Dicionário contendo os dados do feedback.
+        page: Página Flet atual.
+
+    Returns:
+        True se o envio for bem-sucedido, False caso contrário.
     """
     if not is_valid_email(user_email):
         snack_bar = ft.SnackBar(
             content=ft.Text(
-                "Endereço de email inválido. Por favor, insira um email válido."
-            ),
-            bgcolor=ft.colors.ERROR,
+                "Endereço de email inválido. Insira um email válido."),
+            bgcolor=ft.Colors.ERROR,
         )
         page.overlay.append(snack_bar)
         snack_bar.open = True
@@ -178,39 +199,33 @@ def send_feedback_email(user_email, user_message, page: ft.Page):
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
 
+    # Envio para Supabase
     try:
         supabase_endpoint = f"{SUPABASE_URL}/rest/v1/feedbacks"
-        headers_supabase = {
-            "apikey": SUPABASE_KEY,
-            "Authorization": f"Bearer {SUPABASE_KEY}",
-            "Content-Type": "application/json",
-            "Prefer": "return=representation",
-        }
-
-        res_supabase = requests.post(
-            supabase_endpoint, headers=headers_supabase, json=feedback_data, timeout=10
+        response = requests.post(
+            supabase_endpoint,
+            headers=_get_supabase_headers(),
+            json=feedback_data,
+            timeout=10,
         )
 
-        if res_supabase.status_code in [200, 201]:
-            logging.info("Feedback armazenado no Supabase com sucesso.")
-        else:
+        if response.status_code not in [200, 201]:
             logging.error(
-                f"Erro ao armazenar feedback no Supabase: {
-                    res_supabase.status_code}, {res_supabase.text}"
+                f"Erro ao armazenar feedback no Supabase: {response.status_code}, {response.text}"
             )
             save_feedback_locally(feedback_data)
             return False
-
+        logging.info("Feedback armazenado no Supabase com sucesso.")
     except requests.exceptions.Timeout:
         logging.error("Timeout ao conectar com o Supabase.")
         save_feedback_locally(feedback_data)
         return False
-
     except Exception as e:
         logging.error(f"Erro ao enviar feedback para o Supabase: {e}")
         save_feedback_locally(feedback_data)
         return False
 
+    # Envio por email
     try:
         msg = MIMEMultipart("alternative")
         msg["From"] = EMAIL_USER
@@ -241,9 +256,9 @@ def send_feedback_email(user_email, user_message, page: ft.Page):
         return False
 
 
-def clean_feedback_backup():
+def clean_feedback_backup() -> None:
     """
-    Limpa o arquivo de backup para garantir que todos os feedbacks estejam no formato correto.
+    Limpa o arquivo de backup para manter apenas feedbacks válidos.
     """
     backup_file = "feedback_backup.json"
     if not os.path.exists(backup_file):
@@ -254,14 +269,11 @@ def clean_feedback_backup():
         with open(backup_file, "r", encoding="utf-8") as file:
             backups = json.load(file)
 
-        # Manter apenas itens que são dicionários com as chaves esperadas
         cleaned_backups = [
-            fb
-            for fb in backups
+            fb for fb in backups
             if isinstance(fb, dict) and "email" in fb and "feedback_text" in fb
         ]
 
-        # Atualizar o arquivo com os feedbacks válidos
         with open(backup_file, "w", encoding="utf-8") as file:
             json.dump(cleaned_backups, file, ensure_ascii=False, indent=4)
 

@@ -49,8 +49,8 @@ def download_content(
     barra_de_progresso = ft.ProgressBar(
         width=350,
         height=8,
-        color=ft.colors.PRIMARY,
-        bgcolor=ft.colors.ON_SURFACE,
+        color=ft.Colors.PRIMARY,
+        bgcolor=ft.Colors.ON_SURFACE,
         ref=barra_progress_video_rf,
         visible=False,
     )
@@ -72,7 +72,7 @@ def download_content(
             img_downloader_rf.current.update()
 
             status_text_rf.current.value = "Thumbnail atualizada."
-            status_text_rf.current.color = ft.colors.PRIMARY
+            status_text_rf.current.color = ft.Colors.PRIMARY
             status_text_rf.current.update()
 
             barra_progress_video_rf.current.value = 1.0
@@ -81,7 +81,7 @@ def download_content(
 
         except ValueError as ve:
             status_text_rf.current.value = str(ve)
-            status_text_rf.current.color = ft.colors.ERROR
+            status_text_rf.current.color = ft.Colors.ERROR
             status_text_rf.current.update()
 
             barra_progress_video_rf.current.value = 1.0
@@ -90,7 +90,7 @@ def download_content(
 
             snackbar = ft.SnackBar(
                 content=ft.Text(str(ve)),
-                bgcolor=ft.colors.ERROR,
+                bgcolor=ft.Colors.ERROR,
                 action="OK",
             )
             snackbar.on_action = lambda e: None
@@ -103,11 +103,11 @@ def download_content(
             page.client_storage.set("download_directory", directory_path)
             status_text_rf.current.value = f"Diretório selecionado: {
                 directory_path}"
-            status_text_rf.current.color = ft.colors.PRIMARY
+            status_text_rf.current.color = ft.Colors.PRIMARY
             status_text_rf.current.update()
             snackbar = ft.SnackBar(
                 content=ft.Text(f"Diretório selecionado: {directory_path}"),
-                bgcolor=ft.colors.PRIMARY,
+                bgcolor=ft.Colors.PRIMARY,
                 action="OK",
             )
             snackbar.on_action = lambda e: None
@@ -121,11 +121,11 @@ def download_content(
         page.client_storage.set("selected_format", format_dropdown)
         if link and format_dropdown:
             status_text_rf.current.value = "Iniciando download..."
-            status_text_rf.current.color = ft.colors.PRIMARY
+            status_text_rf.current.color = ft.Colors.PRIMARY
             status_text_rf.current.update()
             snackbar = ft.SnackBar(
                 content=ft.Text("Download iniciado..."),
-                bgcolor=ft.colors.PRIMARY,
+                bgcolor=ft.Colors.PRIMARY,
                 action="OK",
             )
             snackbar.on_action = lambda e: None
@@ -145,12 +145,12 @@ def download_content(
             status_text_rf.current.value = (
                 "Por favor, insira um link e escolha um formato."
             )
-            status_text_rf.current.color = ft.colors.ERROR
+            status_text_rf.current.color = ft.Colors.ERROR
             status_text_rf.current.update()
             snackbar = ft.SnackBar(
                 content=ft.Text(
                     "Por favor, insira um link e escolha um formato."),
-                bgcolor=ft.colors.ERROR,
+                bgcolor=ft.Colors.ERROR,
                 action="OK",
             )
             snackbar.on_action = lambda e: None
@@ -210,13 +210,13 @@ def download_content(
             status_text_rf.current.value = (
                 "Nenhum diretório selecionado! Por favor, selecione um diretório."
             )
-            status_text_rf.current.color = ft.colors.ERROR
+            status_text_rf.current.color = ft.Colors.ERROR
             status_text_rf.current.update()
             snackbar = ft.SnackBar(
                 content=ft.Text(
                     "Nenhum diretório selecionado! Por favor, selecione um diretório."
                 ),
-                bgcolor=ft.colors.ERROR,
+                bgcolor=ft.Colors.ERROR,
                 action="OK",
             )
             snackbar.on_action = lambda e: None
@@ -310,12 +310,12 @@ def download_content(
     input_link = ft.TextField(
         label="Digite o link do vídeo",
         width=400,
-        focused_border_color=ft.colors.PRIMARY,
-        focused_bgcolor=ft.colors.SECONDARY,
-        cursor_color=ft.colors.ON_SURFACE,
+        focused_border_color=ft.Colors.PRIMARY,
+        focused_bgcolor=ft.Colors.SECONDARY,
+        cursor_color=ft.Colors.ON_SURFACE,
         content_padding=ft.padding.all(10),
         hint_text="Cole o link do YouTube aqui...",
-        prefix_icon=ft.icons.LINK,
+        prefix_icon=ft.Icons.LINK,
         on_change=update_thumbnail,
         on_focus=check_clipboard_for_youtube_link,
         ref=input_link_rf,
@@ -344,15 +344,15 @@ def download_content(
 
     download_button = ft.ElevatedButton(
         text="Iniciar Download",
-        icon=ft.icons.DOWNLOAD,
+        icon=ft.Icons.DOWNLOAD,
         style=ft.ButtonStyle(
             bgcolor={
-                ft.ControlState.DEFAULT: ft.colors.PRIMARY,
-                ft.ControlState.HOVERED: ft.colors.ON_PRIMARY_CONTAINER,
+                ft.ControlState.DEFAULT: ft.Colors.PRIMARY,
+                ft.ControlState.HOVERED: ft.Colors.ON_PRIMARY_CONTAINER,
             },
             color={
-                ft.ControlState.DEFAULT: ft.colors.ON_PRIMARY,
-                ft.ControlState.HOVERED: ft.colors.ON_SECONDARY,
+                ft.ControlState.DEFAULT: ft.Colors.ON_PRIMARY,
+                ft.ControlState.HOVERED: ft.Colors.ON_SECONDARY,
             },
             elevation={"pressed": 0, "": 1},
             animation_duration=500,
@@ -364,7 +364,7 @@ def download_content(
 
     status_text = ft.Text(
         value="Faça o download do seu vídeo aqui!",
-        color=ft.colors.PRIMARY,
+        color=ft.Colors.PRIMARY,
         size=18,
         ref=status_text_rf,
         weight=ft.FontWeight.BOLD,

@@ -25,10 +25,9 @@ def HistoryPage(page: ft.Page):
     selected_items = set()  # Conjunto para armazenar IDs selecionados
     last_deleted_items = []  # Lista para armazenar itens excluídos temporariamente
 
-    dlg_modal_rf = ft.Ref[ft.AlertDialog]() 
-    
-    counts_text = ft.Text("", size=16, weight=ft.FontWeight.W_600)
+    dlg_modal_rf = ft.Ref[ft.AlertDialog]()
 
+    counts_text = ft.Text("", size=16, weight=ft.FontWeight.W_600)
 
     def render_download_item(item):
         item_id = item.get("id")
@@ -53,7 +52,7 @@ def HistoryPage(page: ft.Page):
                 update_history_view()
                 snack_bar = ft.SnackBar(
                     content=ft.Text("Item excluído."),
-                    bgcolor=ft.colors.PRIMARY,
+                    bgcolor=ft.Colors.PRIMARY,
                     action="Desfazer",
                 )
                 snack_bar.on_action = lambda e: undo_delete(e)
@@ -64,7 +63,7 @@ def HistoryPage(page: ft.Page):
                 logger.error(f"Erro ao excluir o item: {ex}")
                 snack_bar = ft.SnackBar(
                     content=ft.Text("Erro ao excluir o item."),
-                    bgcolor=ft.colors.ERROR,
+                    bgcolor=ft.Colors.ERROR,
                 )
                 page.overlay.append(snack_bar)
                 snack_bar.open = True
@@ -77,7 +76,7 @@ def HistoryPage(page: ft.Page):
             update_history_view()
             snack_bar = ft.SnackBar(
                 content=ft.Text("Exclusão desfeita."),
-                bgcolor=ft.colors.PRIMARY,
+                bgcolor=ft.Colors.PRIMARY,
             )
             page.overlay.append(snack_bar)
             snack_bar.open = True
@@ -101,7 +100,8 @@ def HistoryPage(page: ft.Page):
                         width=235,
                         height=120,
                         fit=ft.ImageFit.COVER,
-                        border_radius=ft.border_radius.only(top_left=8, top_right=8),
+                        border_radius=ft.border_radius.only(
+                            top_left=8, top_right=8),
                         expand=True,
                     ),
                     ft.Container(
@@ -117,33 +117,33 @@ def HistoryPage(page: ft.Page):
                                 ft.Text(
                                     f"Formato: {item.get('format', 'Formato Indisponível')}",
                                     size=14,
-                                    color=ft.colors.ON_SURFACE_VARIANT,
+                                    color=ft.Colors.ON_SURFACE_VARIANT,
                                     weight=ft.FontWeight.W_600,
                                 ),
                                 ft.Row(
                                     controls=[
                                         ft.IconButton(
-                                            icon=ft.icons.PLAY_ARROW,
-                                            on_click=None,  
+                                            icon=ft.Icons.PLAY_ARROW,
+                                            on_click=None,
                                             tooltip="Em breve",
                                             icon_size=20,
-                                            disabled=True,  
+                                            disabled=True,
                                             style=ft.ButtonStyle(
                                                 padding=ft.padding.all(8)
                                             ),
                                         ),
                                         ft.IconButton(
-                                            icon=ft.icons.FOLDER_OPEN,
-                                            on_click=None,  
+                                            icon=ft.Icons.FOLDER_OPEN,
+                                            on_click=None,
                                             tooltip="Em breve",
                                             icon_size=20,
-                                            disabled=True,  
+                                            disabled=True,
                                             style=ft.ButtonStyle(
                                                 padding=ft.padding.all(8)
                                             ),
                                         ),
                                         ft.IconButton(
-                                            icon=ft.icons.DELETE_OUTLINE,
+                                            icon=ft.Icons.DELETE_OUTLINE,
                                             on_click=lambda e, item_id=item_id: delete_item(
                                                 e, item_id
                                             ),
@@ -154,11 +154,11 @@ def HistoryPage(page: ft.Page):
                                             ),
                                         ),
                                         ft.IconButton(
-                                            icon=ft.icons.DELETE,
-                                            on_click=None,  
+                                            icon=ft.Icons.DELETE,
+                                            on_click=None,
                                             tooltip="Em breve",
                                             icon_size=20,
-                                            disabled=True,  
+                                            disabled=True,
                                             style=ft.ButtonStyle(
                                                 padding=ft.padding.all(8)
                                             ),
@@ -175,11 +175,11 @@ def HistoryPage(page: ft.Page):
             ),
             width=220,
             border_radius=ft.border_radius.all(8),
-            bgcolor=ft.colors.SURFACE,
+            bgcolor=ft.Colors.SURFACE,
             shadow=ft.BoxShadow(
                 spread_radius=1,
                 blur_radius=4,
-                color=ft.colors.with_opacity(0.2, ft.colors.BLACK),
+                color=ft.Colors.with_opacity(0.2, ft.Colors.BLACK),
                 offset=ft.Offset(0, 2),
             ),
             animate_scale=ft.Animation(300, ft.AnimationCurve.EASE_IN_OUT),
@@ -198,7 +198,7 @@ def HistoryPage(page: ft.Page):
         if not download_history:
             snack_bar = ft.SnackBar(
                 content=ft.Text("Nenhum item para excluir."),
-                bgcolor=ft.colors.ERROR,
+                bgcolor=ft.Colors.ERROR,
             )
             page.overlay.append(snack_bar)
             snack_bar.open = True
@@ -212,7 +212,7 @@ def HistoryPage(page: ft.Page):
             dlg_modal_rf.current.open = False
             snack_bar = ft.SnackBar(
                 content=ft.Text("Todos os itens foram excluídos."),
-                bgcolor=ft.colors.PRIMARY,
+                bgcolor=ft.Colors.PRIMARY,
                 action="Desfazer",
             )
             snack_bar.on_action = lambda e: undo_delete_all(
@@ -244,7 +244,7 @@ def HistoryPage(page: ft.Page):
         update_history_view()
         snack_bar = ft.SnackBar(
             content=ft.Text("Exclusão desfeita."),
-            bgcolor=ft.colors.PRIMARY,
+            bgcolor=ft.Colors.PRIMARY,
         )
         page.overlay.append(snack_bar)
         snack_bar.open = True
@@ -268,28 +268,28 @@ def HistoryPage(page: ft.Page):
         history_grid.controls = [
             render_download_item(item) for item in filtered_history
         ]
-        
+
         # Atualizar as contagens
         total_downloads = len(download_history)
         filtered_downloads = len(filtered_history)
         counts_text.value = f"Total de downloads: {total_downloads} | Exibindo: {filtered_downloads}"
         counts_text.update()
-        
+
         page.update()
 
     excluir_tudo_button = ft.ElevatedButton(
         text="Excluir Tudo",
-        icon=ft.icons.DELETE_FOREVER,
-        bgcolor=ft.colors.ERROR,
-        color=ft.colors.ON_ERROR,
+        icon=ft.Icons.DELETE_FOREVER,
+        bgcolor=ft.Colors.ERROR,
+        color=ft.Colors.ON_ERROR,
         on_click=delete_all,
     )
 
     atualizar_lista_button = ft.ElevatedButton(
         text="Atualizar Lista",
-        icon=ft.icons.UPDATE,
-        bgcolor=ft.colors.ON_PRIMARY_CONTAINER,
-        color=ft.colors.PRIMARY_CONTAINER,
+        icon=ft.Icons.UPDATE,
+        bgcolor=ft.Colors.ON_PRIMARY_CONTAINER,
+        color=ft.Colors.PRIMARY_CONTAINER,
         on_click=update_history_view,
     )
 
@@ -318,7 +318,7 @@ def HistoryPage(page: ft.Page):
         max_extent=240,
         child_aspect_ratio=0.75,
         spacing=10,
-        expand=True,  
+        expand=True,
     )
 
     # AlertDialog para confirmações
@@ -338,7 +338,8 @@ def HistoryPage(page: ft.Page):
     return ft.Container(
         content=ft.Column(
             controls=[
-                ft.Text("Histórico de Downloads", size=28, weight=ft.FontWeight.BOLD),
+                ft.Text("Histórico de Downloads", size=28,
+                        weight=ft.FontWeight.BOLD),
                 counts_text,
                 ft.Row(
                     controls=[
@@ -349,7 +350,7 @@ def HistoryPage(page: ft.Page):
                     ],
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 ),
-                ft.Divider(height=2, color=ft.colors.OUTLINE),
+                ft.Divider(height=2, color=ft.Colors.OUTLINE),
                 ft.Container(
                     content=history_grid,
                     expand=True,  # Expande o Container que envolve o GridView

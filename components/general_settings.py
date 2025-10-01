@@ -13,11 +13,11 @@ def sync_local_feedback(page: ft.Page):
 def GeneralSettings(page: ft.Page):
     reset_button = ft.ElevatedButton(
         text="Resetar Configurações 🛠️",
-        icon=ft.icons.RESTART_ALT,
+        icon=ft.Icons.RESTART_ALT,
         on_click=lambda e: reset_app_settings(page),
         style=ft.ButtonStyle(
-            bgcolor=ft.colors.ERROR,
-            color=ft.colors.ON_ERROR,
+            bgcolor=ft.Colors.ERROR,
+            color=ft.Colors.ON_ERROR,
             elevation=4,
             shape=ft.RoundedRectangleBorder(radius=8),
         ),
@@ -30,7 +30,7 @@ def GeneralSettings(page: ft.Page):
 
         snack_bar = ft.SnackBar(
             content=ft.Text("Configurações resetadas! 🚀 Reiniciando o app..."),
-            bgcolor=ft.colors.PRIMARY,
+            bgcolor=ft.Colors.PRIMARY,
         )
         page.overlay.append(snack_bar)
         snack_bar.open = True
@@ -43,18 +43,18 @@ def GeneralSettings(page: ft.Page):
     feedback_text = ft.Text(
         value="Ei, você! 🙋‍♂️ Que tal nos ajudar a melhorar ainda mais este app? Enviar um feedback é rápido, indolor e pode tornar sua experiência (e de outros usuários) ainda melhor! Queremos saber de tudo: elogios, críticas, ideias malucas... Só clicar no botão e mandar ver!",
         size=16,
-        color=ft.colors.ON_SURFACE,
+        color=ft.Colors.ON_SURFACE,
         max_lines=3,
         overflow=ft.TextOverflow.ELLIPSIS,
     )
 
     feedback_button = ft.ElevatedButton(
         text="Enviar Feedback 👍",
-        icon=ft.icons.FEEDBACK,
+        icon=ft.Icons.FEEDBACK,
         on_click=lambda e: page.go("/feedback"),
         style=ft.ButtonStyle(
-            bgcolor=ft.colors.SECONDARY,
-            color=ft.colors.ON_SECONDARY,
+            bgcolor=ft.Colors.SECONDARY,
+            color=ft.Colors.ON_SECONDARY,
             elevation=4,
             shape=ft.RoundedRectangleBorder(radius=8),
         ),

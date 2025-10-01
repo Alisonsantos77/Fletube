@@ -71,7 +71,7 @@ def create_user_menu(page: ft.Page):
                     ),
                     ft.Container(
                         content=ft.CircleAvatar(
-                            bgcolor=ft.colors.GREEN, radius=5),
+                            bgcolor=ft.Colors.GREEN, radius=5),
                         alignment=ft.alignment.bottom_left,
                     ),
                 ],
@@ -85,9 +85,9 @@ def create_user_menu(page: ft.Page):
                 content=ft.Row(
                     controls=[
                         ft.Icon(
-                            name=ft.icons.PERSON_4_SHARP,
+                            name=ft.Icons.PERSON_4_SHARP,
                             size=20,
-                            color=ft.colors.BLUE_GREY_500,
+                            color=ft.Colors.BLUE_GREY_500,
                         ),
                         ft.Text(
                             value=f"{username}",
@@ -101,9 +101,9 @@ def create_user_menu(page: ft.Page):
                 content=ft.Row(
                     controls=[
                         ft.Icon(
-                            name=ft.icons.CALENDAR_MONTH_ROUNDED,
+                            name=ft.Icons.CALENDAR_MONTH_ROUNDED,
                             size=20,
-                            color=ft.colors.BLUE_GREY_500,
+                            color=ft.Colors.BLUE_GREY_500,
                         ),
                         ft.Text(
                             value=f"{assinatura}",
@@ -115,9 +115,9 @@ def create_user_menu(page: ft.Page):
                 content=ft.Row(
                     controls=[
                         ft.Icon(
-                            name=ft.icons.TIMER,
+                            name=ft.Icons.TIMER,
                             size=20,
-                            color=ft.colors.BLUE_GREY_500,
+                            color=ft.Colors.BLUE_GREY_500,
                         ),
                         CountDown(
                             segundos=restantes * 86400) if restantes else ft.Text(value="Carregando...", size=14),
@@ -128,9 +128,9 @@ def create_user_menu(page: ft.Page):
                 content=ft.Row(
                     controls=[
                         ft.Icon(
-                            name=ft.icons.SETTINGS,
+                            name=ft.Icons.SETTINGS,
                             size=20,
-                            color=ft.colors.BLUE_GREY_500,
+                            color=ft.Colors.BLUE_GREY_500,
                         ),
                         ft.Text(
                             value="Configurações",
@@ -145,14 +145,14 @@ def create_user_menu(page: ft.Page):
                 content=ft.Row(
                     controls=[
                         ft.Icon(
-                            name=ft.icons.LOGOUT_SHARP,
+                            name=ft.Icons.LOGOUT_SHARP,
                             size=20,
-                            color=ft.colors.RED,
+                            color=ft.Colors.RED,
                         ),
                         ft.Text(
                             value="Sair",
                             size=14,
-                            color=ft.colors.RED,
+                            color=ft.Colors.RED,
                         ),
                     ]
                 ),

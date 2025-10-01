@@ -2,7 +2,7 @@ import re
 import logging
 import flet as ft
 from datetime import datetime, timezone
-from services.supabase_utils import user_inative
+from services.supabase_utils import set_user_inactive
 # Configura o logging
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
@@ -32,7 +32,7 @@ def exibir_mensagem_erro(page: ft.Page, message: str):
     """
     snack_bar = ft.SnackBar(
         content=ft.Text(message),
-        bgcolor=ft.colors.ERROR,
+        bgcolor=ft.Colors.ERROR,
     )
     page.overlay.append(snack_bar)
     snack_bar.open = True
@@ -85,7 +85,7 @@ def verify_auth(page: ft.Page) -> bool:
             logging.info("Usuário expirado")
             # Inativa o usuário no banco de dados
             user_id = page.client_storage.get("user_id")
-            user_inative(user_id)
+            set_user_inactive(user_id)
             page.update()
             page.go("/login")
             return False

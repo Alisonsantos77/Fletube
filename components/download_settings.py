@@ -19,7 +19,7 @@ def DownloadSettings(page: ft.Page):
 
     select_directory_button = ft.ElevatedButton(
         text="Selecionar Diretório",
-        icon=ft.icons.FOLDER_OPEN,
+        icon=ft.Icons.FOLDER_OPEN,
         on_click=lambda e: file_picker.get_directory_path(),
     )
 

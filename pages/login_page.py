@@ -18,21 +18,21 @@ def LoginPage(page: ft.Page):
         value="Bem-vindo ao Fletube!",
         size=32,
         weight=ft.FontWeight.BOLD,
-        color=ft.colors.BLUE_GREY_800,
+        color=ft.Colors.BLUE_GREY_800,
         text_align=ft.TextAlign.CENTER,
     )
 
     login_description = ft.Text(
         value="Entre para acessar seus downloads e histórico!",
         size=16,
-        color=ft.colors.BLUE_GREY_600,
+        color=ft.Colors.BLUE_GREY_600,
         text_align=ft.TextAlign.CENTER,
     )
 
     input_username = ft.TextField(
         label="Nome de usuário",
         hint_text="Digite seu nome de usuário",
-        border_color=ft.colors.BLUE_GREY_300,
+        border_color=ft.Colors.BLUE_GREY_300,
         border_radius=8,
         border_width=1,
         width=280,
@@ -41,7 +41,7 @@ def LoginPage(page: ft.Page):
     input_senha = ft.TextField(
         label="Senha", password=True,
         can_reveal_password=True,
-        border_color=ft.colors.BLUE_GREY_300,
+        border_color=ft.Colors.BLUE_GREY_300,
         border_radius=8,
         border_width=1,
         width=280,
@@ -56,7 +56,7 @@ def LoginPage(page: ft.Page):
         if status == "success":
             page.snack_bar = ft.SnackBar(
                 content=ft.Text("Login efetuado com sucesso!"),
-                bgcolor=ft.colors.GREEN_400,
+                bgcolor=ft.Colors.GREEN_400,
             )
             page.snack_bar.open = True
             page.update()
@@ -99,7 +99,7 @@ def LoginPage(page: ft.Page):
                 content=ft.Text(
                     "Sua conta expirou. Entre em contato com o suporte."
                 ),
-                bgcolor=ft.colors.RED_400,
+                bgcolor=ft.Colors.RED_400,
                 # Falar com suporte
                 action="Falar com suporte",
                 on_action=lambda _: page.launch_url(
@@ -112,7 +112,7 @@ def LoginPage(page: ft.Page):
         else:
             page.snack_bar = ft.SnackBar(
                 content=ft.Text("Usuário ou senha inválidos."),
-                bgcolor=ft.colors.RED_400,
+                bgcolor=ft.Colors.RED_400,
             )
             page.snack_bar.open = True
             page.update()

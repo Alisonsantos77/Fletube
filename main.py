@@ -131,7 +131,7 @@ def main(page: ft.Page):
         logging.info("Usuário não autenticado")
         page.snack_bar = ft.SnackBar(
             content=ft.Text("Faça login para acessar esta página."),
-            bgcolor=ft.colors.RED_400,
+            bgcolor=ft.Colors.RED_400,
         )
         page.snack_bar.open = True
         page.go("/login")

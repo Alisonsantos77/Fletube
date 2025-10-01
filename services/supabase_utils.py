@@ -1,35 +1,49 @@
-import asyncio
 import os
 import logging
-import requests
-from dotenv import load_dotenv
 from datetime import datetime
 import pytz
+import requests
+from dotenv import load_dotenv
 import flet as ft
 
 load_dotenv()
 
 SUPABASE_KEY_USERS = os.getenv("SUPABASE_KEY_USERS")
 SUPABASE_URL_USERS = os.getenv("SUPABASE_URL_USERS")
-
-# Configurando o logging
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s [%(levelname)s] %(message)s')
-
-# Defina o fuso horário local
 LOCAL_TIMEZONE = pytz.timezone("America/Sao_Paulo")
 
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s'
+)
 
-def validate_user(username: str, password: str) -> tuple:
-    headers = {
+
+def _get_headers() -> dict:
+    """
+    Retorna os headers padrão para requisições ao Supabase.
+    """
+    return {
         "apikey": SUPABASE_KEY_USERS,
-        "Authorization": f"Bearer {SUPABASE_KEY_USERS}"
+        "Authorization": f"Bearer {SUPABASE_KEY_USERS}",
+        "Content-Type": "application/json"
     }
 
+
+def validate_user(username: str, password: str) -> tuple[str, dict | None]:
+    """
+    Valida um usuário no Supabase verificando existência, senha e status.
+
+    Args:
+        username: Nome de usuário.
+        password: Senha fornecida.
+
+    Returns:
+        Tuple contendo status ("success", "invalid", "inactive") e dados do usuário se aplicável.
+    """
     url = f"{SUPABASE_URL_USERS}/rest/v1/users?username=eq.{username}&select=*"
 
     try:
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=_get_headers())
         response.raise_for_status()
 
         user_data = response.json()
@@ -39,11 +53,11 @@ def validate_user(username: str, password: str) -> tuple:
 
         user = user_data[0]
 
-        if user['password'] != password:
+        if user.get('password') != password:
             logging.warning(f"Senha incorreta para o usuário {username}.")
             return "invalid", None
 
-        if user['status'] != "ativo":
+        if user.get('status') != "ativo":
             logging.warning(f"Usuário {username} não está ativo.")
             return "inactive", user
 
@@ -53,78 +67,72 @@ def validate_user(username: str, password: str) -> tuple:
         logging.error(f"Erro ao verificar o usuário {username}: {e}")
         return "invalid", None
 
-def user_inative(user_id: str):
-    headers = {
-        "apikey": SUPABASE_KEY_USERS,
-        "Authorization": f"Bearer {SUPABASE_KEY_USERS}",
-        "Content-Type": "application/json"
-    }
 
-    update_url = f"{SUPABASE_URL_USERS}/rest/v1/users?id=eq.{user_id}"
+def set_user_inactive(user_id: str) -> None:
+    """
+    Marca o usuário como inativo no Supabase.
 
-    data = {
-        "status": "inativo"
-    }
+    Args:
+        user_id: ID do usuário.
+    """
+    url = f"{SUPABASE_URL_USERS}/rest/v1/users?id=eq.{user_id}"
+    data = {"status": "inativo"}
 
     try:
-        response = requests.patch(update_url, headers=headers, json=data)
+        response = requests.patch(url, headers=_get_headers(), json=data)
         response.raise_for_status()
-
         if response.status_code in [200, 204]:
             logging.info(f"Usuário {user_id} inativado com sucesso.")
         else:
-            logging.error(f"Erro ao inativar o usuário {user_id}: {response.text}")
-
+            logging.error(
+                f"Erro ao inativar o usuário {user_id}: {response.text}")
     except requests.RequestException as e:
         logging.error(f"Erro ao inativar o usuário {user_id}: {e}")
 
-def update_user_last_login(user_id: str, last_login: str):
+
+def update_user_last_login(user_id: str, last_login: str) -> None:
+    """
+    Atualiza a data/hora do último login de um usuário.
+
+    Args:
+        user_id: ID do usuário.
+        last_login: Data/hora do último login em formato ISO.
+    """
     logging.info(f"Atualizando último login do usuário {user_id}...")
-    headers = {
-        "apikey": SUPABASE_KEY_USERS,
-        "Authorization": f"Bearer {SUPABASE_KEY_USERS}",
-        "Content-Type": "application/json"
-    }
 
-    update_url = f"{SUPABASE_URL_USERS}/rest/v1/users?id=eq.{user_id}"
-
-    # Converte last_login de string para datetime
     try:
-        last_login_datetime = datetime.fromisoformat(last_login)
+        last_login_dt = datetime.fromisoformat(last_login)
     except ValueError as e:
         logging.error(f"Erro ao converter last_login para datetime: {e}")
         return
 
-    # Ajusta o last_login para o fuso horário local
-    local_last_login = last_login_datetime.astimezone(LOCAL_TIMEZONE)
-
-    data = {
-        "ultimo_login": local_last_login.isoformat()
-    }
+    local_last_login = last_login_dt.astimezone(LOCAL_TIMEZONE)
+    url = f"{SUPABASE_URL_USERS}/rest/v1/users?id=eq.{user_id}"
+    data = {"ultimo_login": local_last_login.isoformat()}
 
     try:
-        response = requests.patch(update_url, headers=headers, json=data)
+        response = requests.patch(url, headers=_get_headers(), json=data)
         response.raise_for_status()
-
-        if response.status_code in [200, 204]:
-            logging.info(f"Último login do usuário {user_id} atualizado com sucesso.")
-        else:
-            logging.error(f"Erro ao atualizar o último login do usuário {user_id}: {response.text}")
-
+        logging.info(
+            f"Último login do usuário {user_id} atualizado com sucesso.")
     except requests.RequestException as e:
         logging.error(f"Erro ao atualizar os dados do usuário {user_id}: {e}")
 
-# verifica se o usuário ainda está ativo
-def user_is_active(user_id: str):
-    headers = {
-        "apikey": SUPABASE_KEY_USERS,
-        "Authorization": f"Bearer {SUPABASE_KEY_USERS}"
-    }
 
+def user_is_active(user_id: str) -> bool:
+    """
+    Verifica se o usuário está ativo.
+
+    Args:
+        user_id: ID do usuário.
+
+    Returns:
+        True se o usuário estiver ativo, False caso contrário.
+    """
     url = f"{SUPABASE_URL_USERS}/rest/v1/users?id=eq.{user_id}&select=status"
 
     try:
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=_get_headers())
         response.raise_for_status()
 
         user_data = response.json()
@@ -132,22 +140,24 @@ def user_is_active(user_id: str):
             logging.warning(f"Usuário {user_id} não encontrado.")
             return False
 
-        user = user_data[0]
-
-        if user['status'] != "ativo":
-            logging.warning(f"Usuário {user_id} não está ativo.")
-            return False
-
-        return True
+        return user_data[0].get('status') == "ativo"
 
     except requests.RequestException as e:
         logging.error(f"Erro ao verificar o usuário {user_id}: {e}")
         return False
-    
-def verificar_status_usuario(page):
+
+
+def verificar_status_usuario(page: ft.Page) -> None:
+    """
+    Verifica se o usuário está logado e ativo, caso contrário redireciona para login.
+
+    Args:
+        page: Página Flet corrente.
+    """
     try:
         logging.info("Tentando acessar 'user_id' no clientStorage...")
         user_id = page.client_storage.get("user_id")
+
         if not user_id:
             logging.error(
                 "Chave 'user_id' não encontrada ou clientStorage indisponível.")
@@ -156,9 +166,10 @@ def verificar_status_usuario(page):
             return
 
         if not user_is_active(user_id):
-            page.client_storage.clear()
-            page.go("/login")
             logging.info(
                 "Usuário inativo, redirecionando para a página de login.")
+            page.client_storage.clear()
+            page.go("/login")
+
     except Exception as e:
         logging.error(f"Erro ao verificar o status do usuário: {e}")

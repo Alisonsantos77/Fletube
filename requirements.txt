@@ -1,4 +1,5 @@
 flet
-yt-dlp
 python-dotenv
 pytz
+yt-dlp
+requests

@@ -89,7 +89,8 @@ def FeedbackPage(page: ft.Page):
             user_data["category"] = category_radio_group.value
             user_data["subcategory"] = subcategory_radio_group.value
             logger.info(f"Categoria selecionada: {user_data['category']}")
-            logger.info(f"Subcategoria selecionada: {user_data['subcategory']}")
+            logger.info(
+                f"Subcategoria selecionada: {user_data['subcategory']}")
             return True
         elif current_step[0] == 3:
             user_data["feedback_text"] = feedback_input.value.strip()
@@ -103,7 +104,8 @@ def FeedbackPage(page: ft.Page):
             user_email=user_data["email"], user_message=user_data, page=page
         )
         if success:
-            snack_bar = ft.SnackBar(content=ft.Text("Feedback enviado com sucesso!"))
+            snack_bar = ft.SnackBar(content=ft.Text(
+                "Feedback enviado com sucesso!"))
             page.overlay.append(snack_bar)
             snack_bar.open = True
             logger.info("Feedback enviado com sucesso.")
@@ -179,19 +181,20 @@ def FeedbackPage(page: ft.Page):
     selected_rating = [0]
     stars_ref = []
 
-    rating_error = ft.Text("", color=ft.colors.RED)
+    rating_error = ft.Text("", color=ft.Colors.RED)
 
     def update_stars(selected_index):
         selected_rating[0] = selected_index + 1
         for i, star in enumerate(stars_ref):
             if i <= selected_index:
-                star.icon = ft.icons.STAR
-                star.icon_color = ft.colors.YELLOW
+                star.icon = ft.Icons.STAR
+                star.icon_color = ft.Colors.YELLOW
             else:
-                star.icon = ft.icons.STAR_OUTLINE
-                star.icon_color = ft.colors.GREY
+                star.icon = ft.Icons.STAR_OUTLINE
+                star.icon_color = ft.Colors.GREY
             star.update()
-        logger.info(f"Estrelas atualizadas: {selected_rating[0]} selecionadas.")
+        logger.info(
+            f"Estrelas atualizadas: {selected_rating[0]} selecionadas.")
 
     def on_star_click(e):
         selected_index = int(e.control.data)
@@ -200,8 +203,8 @@ def FeedbackPage(page: ft.Page):
 
     for i in range(5):
         star = ft.IconButton(
-            icon=ft.icons.STAR_OUTLINE,
-            icon_color=ft.colors.GREY,
+            icon=ft.Icons.STAR_OUTLINE,
+            icon_color=ft.Colors.GREY,
             data=i,
             on_click=on_star_click,
         )
@@ -306,13 +309,15 @@ def FeedbackPage(page: ft.Page):
     )
 
     # -------- Passo 5: Revisão e Envio --------
-    review_text = ft.Markdown("") 
+    review_text = ft.Markdown("")
 
-    submit_button = ft.ElevatedButton("Enviar Feedback", on_click=submit_feedback)
+    submit_button = ft.ElevatedButton(
+        "Enviar Feedback", on_click=submit_feedback)
 
     step5 = ft.Column(
         [
-            ft.Text("Etapa 5 de 5: Revisão", size=20, weight=ft.FontWeight.BOLD),
+            ft.Text("Etapa 5 de 5: Revisão", size=20,
+                    weight=ft.FontWeight.BOLD),
             review_text,
             ft.Row(
                 [
