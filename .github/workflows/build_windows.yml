@@ -1,4 +1,4 @@
-name: 🛠 Build Windows App
+name: 🛠 Build Windows App - Fletube
 
 on:
   push:
@@ -12,57 +12,84 @@ jobs:
     env:
       PYTHONIOENCODING: utf-8
       PYTHONUTF8: 1
-      PYTHONLEGACYWINDOWSSTDIO: utf-8
+      SECRET: ${{ secrets.SECRET }}
+      EMAIL_USER: ${{ secrets.EMAIL_USER }}
+      EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+      SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+      SMTP_PORT: ${{ secrets.SMTP_PORT }}
+      FEEDBACK_RECIPIENT_EMAIL: ${{ secrets.FEEDBACK_RECIPIENT_EMAIL }}
+      SUPABASE_URL_USERS: ${{ secrets.SUPABASE_URL_USERS }}
+      SUPABASE_KEY_USERS: ${{ secrets.SUPABASE_KEY_USERS }}
 
     steps:
-    - name: "🧾 Checkout do código"
+    - name: 🧾 Checkout do código
       uses: actions/checkout@v4
 
-    - name: "🐍 Setup Python"
+    - name: 🐍 Setup Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.13'
+        python-version: '3.13.3'
 
-    - name: "✅ Instalação do Flet"
+    - name: 📦 Instalar dependências do projeto
       run: |
         pip install --upgrade pip
-        pip install "flet[all]"
+        pip install flet==0.28.3 yt-dlp python-dotenv pytz
 
-    - name: "🔧 Setup Flutter"
+    - name: ✅ Setup Flutter
       uses: subosito/flutter-action@v2
       with:
+        flutter-version: '3.24.3'
         channel: stable
-        flutter-version-file: pubspec.yaml
 
-    - name: "⚙️ Preparar Flutter para Windows"
+    - name: 🔎 Verificação do Flutter
+      run: flutter doctor -v
+
+    - name: 🔐 Criar arquivo .env para o build
       run: |
-        flutter config --enable-windows-desktop
-        flutter doctor -v
+        echo "SECRET=$env:SECRET" > .env
+        echo "EMAIL_USER=$env:EMAIL_USER" >> .env
+        echo "EMAIL_PASSWORD=$env:EMAIL_PASSWORD" >> .env
+        echo "SMTP_SERVER=$env:SMTP_SERVER" >> .env
+        echo "SMTP_PORT=$env:SMTP_PORT" >> .env
+        echo "FEEDBACK_RECIPIENT_EMAIL=$env:FEEDBACK_RECIPIENT_EMAIL" >> .env
+        echo "SUPABASE_URL_USERS=$env:SUPABASE_URL_USERS" >> .env
+        echo "SUPABASE_KEY_USERS=$env:SUPABASE_KEY_USERS" >> .env
 
-    - name: "🔁 Instalar dependências Python"
+    - name: 🔐 Garantir variáveis no ambiente de build
       run: |
-        pip install yt-dlp python-dotenv pytz
+        echo "🔸 SECRET definida: $([string]::IsNullOrEmpty($env:SECRET) -eq $false)"
+        echo "🔸 EMAIL_USER definida: $([string]::IsNullOrEmpty($env:EMAIL_USER) -eq $false)"
+        echo "🔸 SUPABASE_URL_USERS definida: $([string]::IsNullOrEmpty($env:SUPABASE_URL_USERS) -eq $false)"
 
-    - name: "🛠 Configurar MSBuild"
+    - name: 🛠 Configurar MSBuild
       uses: microsoft/setup-msbuild@v2
       with:
         vs-version: '17.0'
 
-    - name: "📦 Instalar Build Tools"
+    - name: 📦 Instalar Build Tools
       run: choco install visualstudio2022-workload-vctools --no-progress
 
-    - name: "🚧 Construir executável Windows"
+    - name: 🚀 Build Windows com Flet
       run: |
         echo "⚠️ Definindo código página UTF-8"
         chcp 65001 >NUL
         echo "🚀 Iniciando flet build windows"
-        flet build windows --project Fletube --product "Fletube" --description "Downloader inteligente de videos do youtube" --output build/windows --compile-app
+        flet build windows `
+          --project Fletube `
+          --product "Fletube" `
+          --description "Downloader inteligente de vídeos do YouTube" `
+          --output build/windows `
+          --compile-app -vv
 
-    - name: "📤 Upload do artefato .exe"
+    - name: 📁 Mostrar arquivos gerados
+      run: dir build\windows
+
+    - name: 📤 Upload do artefato .exe
       uses: actions/upload-artifact@v4
       with:
-        name: app-windows
+        name: fletube-windows-${{ github.sha }}
         path: build/windows/
+        retention-days: 30
 
-    - name: "🎉 Build Windows concluído"
-      run: echo "O executável está disponível como artefato na aba Actions."
+    - name: ✅ Finalizado!
+      run: echo "✨ Executável gerado com sucesso! Verifique na aba Actions → Artifacts"
