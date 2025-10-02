@@ -1,0 +1,68 @@
+name: 🛠 Build Windows App
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    env:
+      PYTHONIOENCODING: utf-8
+      PYTHONUTF8: 1
+      PYTHONLEGACYWINDOWSSTDIO: utf-8
+
+    steps:
+    - name: "🧾 Checkout do código"
+      uses: actions/checkout@v4
+
+    - name: "🐍 Setup Python"
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+
+    - name: "✅ Instalação do Flet"
+      run: |
+        pip install --upgrade pip
+        pip install "flet[all]"
+
+    - name: "🔧 Setup Flutter"
+      uses: subosito/flutter-action@v2
+      with:
+        channel: stable
+        flutter-version-file: pubspec.yaml
+
+    - name: "⚙️ Preparar Flutter para Windows"
+      run: |
+        flutter config --enable-windows-desktop
+        flutter doctor -v
+
+    - name: "🔁 Instalar dependências Python"
+      run: |
+        pip install yt-dlp python-dotenv pytz
+
+    - name: "🛠 Configurar MSBuild"
+      uses: microsoft/setup-msbuild@v2
+      with:
+        vs-version: '17.0'
+
+    - name: "📦 Instalar Build Tools"
+      run: choco install visualstudio2022-workload-vctools --no-progress
+
+    - name: "🚧 Construir executável Windows"
+      run: |
+        echo "⚠️ Definindo código página UTF-8"
+        chcp 65001 >NUL
+        echo "🚀 Iniciando flet build windows"
+        flet build windows --project Fletube --product "Fletube" --description "Downloader inteligente de videos do youtube" --output build/windows --compile-app
+
+    - name: "📤 Upload do artefato .exe"
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-windows
+        path: build/windows/
+
+    - name: "🎉 Build Windows concluído"
+      run: echo "O executável está disponível como artefato na aba Actions."
