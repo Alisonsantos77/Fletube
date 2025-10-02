@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import time
 import flet as ft
@@ -12,13 +11,11 @@ from services.download_manager import DownloadManager
 from datetime import datetime, timezone
 from services.supabase_utils import user_is_active
 from utils.validations import verify_auth
-# Configuração de logging
-logging.basicConfig(
-    filename="logs/app.log",
-    format="%(asctime)s %(levelname)s: %(name)s: %(message)s",
-    level=logging.INFO,
-)
-logging.getLogger("flet_core").setLevel(logging.INFO)
+from utils.logging_config import setup_logging, get_logger
+
+# Configuração centralizada de logging
+setup_logging()
+logger = get_logger(__name__)
 
 
 def verificar_status_usuario(page):
@@ -46,14 +43,14 @@ def verificar_status_usuario(page):
 
     for attempt in range(retries):
         try:
-            logging.info(
+            logger.info(
                 f"Tentando acessar 'user_id' no clientStorage (tentativa {attempt + 1})...")
 
             # Verifica se o 'user_id' está armazenado no clientStorage
             user_id = page.client_storage.get("user_id")
 
             if user_id is None:
-                logging.error("Chave 'user_id' não encontrada.")
+                logger.error("Chave 'user_id' não encontrada.")
                 page.client_storage.clear()
                 page.go("/login")
                 return
@@ -64,11 +61,11 @@ def verificar_status_usuario(page):
             current_time = time.time()
 
             if cached_status and current_time - last_checked < 600:  # Cache válido por 10 minutos
-                logging.info("Status do usuário obtido do cache.")
+                logger.info("Status do usuário obtido do cache.")
                 if cached_status == "inativo":
                     page.client_storage.clear()
                     page.go("/login")
-                    logging.info(
+                    logger.info(
                         "Usuário inativo, redirecionando para a página de login.")
                 return  # Usando o status do cache sem fazer outra requisição
 
@@ -76,7 +73,7 @@ def verificar_status_usuario(page):
             if not user_is_active(user_id):
                 page.client_storage.clear()
                 page.go("/login")
-                logging.info(
+                logger.info(
                     "Usuário inativo, redirecionando para a página de login.")
 
             # Cache o status do usuário e a hora da última verificação
@@ -87,7 +84,7 @@ def verificar_status_usuario(page):
             break  # Se conseguiu, sai do loop
 
         except Exception as e:
-            logging.error(f"Erro ao verificar o status do usuário: {e}")
+            logger.error(f"Erro ao verificar o status do usuário: {e}")
             # Aplica o backoff exponencial entre as tentativas
             # Limita o delay máximo a max_delay
             time.sleep(min(delay, max_delay))
@@ -100,7 +97,7 @@ def apply_saved_theme_and_font(page: ft.Page):
     page.theme_mode = (
         ft.ThemeMode.DARK if theme_mode_value == "DARK" else ft.ThemeMode.LIGHT
     )
-    logging.info(f"Tema carregado: {page.theme_mode}")
+    logger.info(f"Tema carregado: {page.theme_mode}")
 
     # Carregar e aplicar a fonte salva no client_storage
     font_family_value = page.client_storage.get("font_family") or "Padrão"
@@ -118,17 +115,17 @@ def apply_saved_theme_and_font(page: ft.Page):
         if font_family_value != "Padrão"
         else ft.Theme()
     )
-    logging.info(f"Fonte carregada: {font_family_value}")
+    logger.info(f"Fonte carregada: {font_family_value}")
 
     page.update()
 
 
 def main(page: ft.Page):
-    logging.info("Iniciando Fletube")
+    logger.info("Iniciando Fletube")
 
     # Verificar se o usuário está autenticado
     if not verify_auth(page):
-        logging.info("Usuário não autenticado")
+        logger.info("Usuário não autenticado")
         page.snack_bar = ft.SnackBar(
             content=ft.Text("Faça login para acessar esta página."),
             bgcolor=ft.Colors.RED_400,
@@ -163,12 +160,12 @@ def main(page: ft.Page):
     # Configuração de evento de ciclo de vida da aplicação
     def handle_lifecycle_change(e: ft.AppLifecycleStateChangeEvent):
         if e.data == "inactive":
-            logging.info("Aplicação em segundo plano")
+            logger.info("Aplicação em segundo plano")
             page.session.set("app_in_background", True)
             # Verifica o status do usuário
             verificar_status_usuario(page)
         elif e.data == "active":
-            logging.info("Aplicação voltou ao primeiro plano")
+            logger.info("Aplicação voltou ao primeiro plano")
             page.session.set("app_in_background", False)
             page.update()
 
@@ -192,5 +189,5 @@ def main(page: ft.Page):
 
 
 if __name__ == "__main__":
-    logging.info("Inicializando aplicação Fletube")
+    logger.info("Inicializando aplicação Fletube")
     ft.app(target=main, assets_dir="assets")

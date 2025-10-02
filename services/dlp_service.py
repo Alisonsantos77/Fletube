@@ -24,7 +24,8 @@ def download_with_ydl(ydl_opts, link):
         with YoutubeDL(ydl_opts) as ydl:
             ydl.download([link])
     except Exception as e:
-        logger.error("Ocorreu um erro durante o download para link %s: %s", link, e)
+        logger.error(
+            "Ocorreu um erro durante o download para link %s: %s", link, e)
         raise e
 
 
@@ -38,7 +39,6 @@ def start_download(link, format, diretorio, progress_hook):
         directory (str): O diretório onde o download será salvo.
         progress_callback (callable): Uma função de callback para atualizar o progresso do download.
     """
-    logger.info("Iniciando start_download")
 
     ydl_opts = {
         "format": f"bestvideo+bestaudio/best",
@@ -79,7 +79,8 @@ def start_download(link, format, diretorio, progress_hook):
             }
         )
     else:
-        logger.warning(f"Formato desconhecido, usando configuração padrão: {format}")
+        logger.warning(
+            f"Formato desconhecido, usando configuração padrão: {format}")
         ydl_opts.update({"format": "best"})
 
     logger.debug(f"ydl_opts configurados: {ydl_opts}")

@@ -25,7 +25,7 @@ from utils.file_picker_utils import setup_file_picker
 from utils.extract_thumbnail import extract_thumbnail_url
 from utils.extract_title import extract_title_from_url
 from utils.validations import validar_input
-from services.download_manager import DownloadManager, download_in_progress
+from services.download_manager import DownloadManager
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,6 @@ def download_content(
     page: ft.Page, sidebar: ft.Control, download_manager: DownloadManager
 ):
 
-    download_status = download_in_progress
     drop_format_rf = ft.Ref[ft.Dropdown]()
     img_downloader_rf = ft.Ref[ft.Image]()
     status_text_rf = ft.Ref[ft.Text]()
@@ -137,7 +136,6 @@ def download_content(
             barra_progress_video_rf.current.visible = True
             barra_progress_video_rf.current.update()
 
-            # Inicia o download através do DownloadManager
             download_manager.iniciar_download(
                 link, format_dropdown, diretorio, sidebar, page)
 
@@ -157,6 +155,7 @@ def download_content(
             page.overlay.append(snackbar)
             snackbar.open = True
             page.update()
+
 
     def renderizar_lista_downloads_salvos(page, sidebar):
         downloads = recuperar_downloads_bem_sucedidos_client(page)
@@ -181,24 +180,22 @@ def download_content(
                     subtitle=format,
                     thumbnail_url=thumbnail,
                     file_path=file_path,
+                    download_manager=download_manager
                 )
         else:
             logger.warning("Nenhum download recuperado do client_storage.")
-
-    async def clipboard_reminder(page, status_text_rf, download_status):
+        
+    async def clipboard_reminder(page, status_text_rf):
         seconds = 60
         while seconds > 0:
-            if not download_status["value"]:
-                if status_text_rf.current is not None:
-                    status_text_rf.current.value = f"Copie o link e passe o mouse na tela dentro de {
-                        seconds} segundos."
-                    status_text_rf.current.update()
-                seconds -= 1
-                await asyncio.sleep(1)
-            else:
-                break
+            if status_text_rf.current is not None:
+                status_text_rf.current.value = f"Copie o link e passe o mouse na tela dentro de {
+                    seconds} segundos."
+                status_text_rf.current.update()
+            seconds -= 1
+            await asyncio.sleep(1)
         else:
-            if not download_status["value"] and status_text_rf.current is not None:
+            if status_text_rf.current is not None:
                 status_text_rf.current.value = "Faça o download do seu vídeo aqui!"
                 status_text_rf.current.update()
 
@@ -247,7 +244,7 @@ def download_content(
         if not clipboard_monitoring:
             return
 
-        if download_status["value"] or dialog_open["value"]:
+        if dialog_open["value"]:
             return
         clipboard_content = page.get_clipboard()
         youtube_link_pattern = r"(https?://)?(www\.)?(youtube\.com|youtu\.be)/\S+"
@@ -425,8 +422,7 @@ def download_content(
         clipboard_monitoring = page.client_storage.get("clipboard_monitoring")
         if clipboard_monitoring:
             page.run_async_task(
-                partial(clipboard_reminder, page,
-                        status_text_rf, download_status)
+                partial(clipboard_reminder, page, status_text_rf)
             )
 
     container.on_layout = on_layout

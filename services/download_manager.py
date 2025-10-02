@@ -1,6 +1,9 @@
-# services/download_manager.py
 
-from utils.client_storage_utils import salvar_downloads_bem_sucedidos_client
+from utils.client_storage_utils import (
+    salvar_downloads_bem_sucedidos_client,
+    salvar_downloads_ativos_client,
+    recuperar_downloads_ativos_client
+)
 import threading
 import uuid
 import logging
@@ -8,53 +11,36 @@ from services.dlp_service import start_download
 import flet as ft
 logger = logging.getLogger(__name__)
 
-# Variável global para controle de download em andamento
-download_in_progress = False
-
 
 class DownloadManager:
     def __init__(self, page, max_downloads=3):
-        """
-        Inicializa o gerenciador de downloads com o número máximo de downloads simultâneos.
-
-        Args:
-            page: A página associada ao gerenciador de downloads.
-            max_downloads (int): O número máximo de downloads simultâneos permitidos. O padrão é 3.
-        """
         self.downloads = {}
         self.lock = threading.Lock()
         self.page = page
         self.max_downloads = max_downloads
-        self.semaphore = threading.Semaphore(
-            self.max_downloads)  # Inicializa o semáforo
-        self.active_downloads = 0  # Contador de downloads ativos
+        self.semaphore = threading.Semaphore(self.max_downloads)
+        self.active_downloads = 0
+        self.cancelled_downloads = set()
+        self.download_threads = {}
+
+        self.carregar_downloads_ativos()
+
+    def carregar_downloads_ativos(self):
+        try:
+            downloads_ativos = recuperar_downloads_ativos_client(self.page)
+            self.downloads.update(downloads_ativos)
+            logger.info(
+                f"Carregados {len(downloads_ativos)} downloads ativos do client_storage")
+        except Exception as e:
+            logger.error(f"Erro ao carregar downloads ativos: {e}")
+
+    def salvar_downloads_ativos(self):
+        try:
+            salvar_downloads_ativos_client(self.page, self.downloads)
+        except Exception as e:
+            logger.error(f"Erro ao salvar downloads ativos: {e}")
 
     def iniciar_download(self, link, formato, diretorio, sidebar, page):
-        global download_in_progress
-
-        if download_in_progress:
-            # Verifica se já existe um download em andamento
-            snack = ft.Snackbar(
-                message="Já existe um download em andamento.", timeout=5000
-            )
-            page.overlay.append(snack)
-            snack.open = True
-            page.update()   
-            logger.warning("Já existe um download em andamento.")
-            return
-
-        # Atualiza o estado global para indicar que o download foi iniciado
-        download_in_progress = True
-        """
-        Inicia o download se o número de downloads simultâneos permitidos não for atingido.
-
-        Args:
-            link (str): O link do vídeo a ser baixado.
-            formato (str): O formato desejado para o download.
-            diretorio (str): O diretório onde o arquivo será salvo.
-            sidebar: A barra lateral que exibe o progresso do download.
-        """
-        # Verifica se há capacidade para mais downloads
         if not self.semaphore.acquire(blocking=False):
             snack = ft.Snackbar(
                 message="Limite de downloads simultâneos atingido.", timeout=5000
@@ -63,7 +49,9 @@ class DownloadManager:
             snack.open = True
             page.update()
             logger.info("Limite de downloads simultâneos atingido.")
-            return  # Impede o novo download se o limite de downloads simultâneos for atingido
+            return
+
+        self.sidebar = sidebar
 
         download_id = str(uuid.uuid4())
         thread = threading.Thread(
@@ -71,32 +59,75 @@ class DownloadManager:
             args=(link, formato, diretorio, download_id, sidebar),
             daemon=True,
         )
+
+        with self.lock:
+            self.download_threads[download_id] = thread
+
         thread.start()
 
+    def cancel_download(self, video_id):
+        with self.lock:
+            self.cancelled_downloads.add(video_id)
+            logger.info(
+                f"Vídeo {video_id} marcado para cancelamento - thread será interrompida")
+
+            if hasattr(self, 'sidebar') and self.sidebar and self.sidebar.mounted:
+                try:
+                    self.sidebar.update_download_item(video_id, 0, "cancelled")
+
+                    def remove_later():
+                        import time
+                        time.sleep(2)
+                        with self.lock:
+                            if video_id in self.sidebar.items:
+                                self.sidebar.downloads_column.controls.remove(
+                                    self.sidebar.items[video_id]
+                                )
+                                del self.sidebar.items[video_id]
+                                self.sidebar.update_download_counts()
+                                if self.sidebar.mounted:
+                                    self.sidebar.update()
+
+                    threading.Thread(target=remove_later, daemon=True).start()
+                except Exception as e:
+                    logger.error(
+                        f"Erro ao atualizar UI após cancelamento: {e}")
+
+    def is_cancelled(self, video_id):
+        return video_id in self.cancelled_downloads
+
     def download_thread(self, link, formato, diretorio, download_id, sidebar):
-        global download_in_progress
+        import time
 
-        """
-        Executa o download em uma thread separada e atualiza o progresso do download.
-        """
+        last_progress_time = 0
+
         def progress_hook(d):
-            global download_in_progress
+            nonlocal last_progress_time
 
-            """
-            Função de callback para monitorar o progresso do download.
-            """
+            info_dict = d.get("info_dict", {})
+            video_id = info_dict.get("id", "")
+
+            if video_id and self.is_cancelled(video_id):
+                logger.info(
+                    f"Vídeo {video_id} cancelado - interrompendo download")
+                raise Exception(f"Download cancelado pelo usuário")
+
+            current_time = time.time()
+            if current_time - last_progress_time < 0.1:
+                return
+            last_progress_time = current_time
+
             with self.lock:
                 self.downloads[download_id] = d
-                logger.info(
-                    f"progress_hook chamado para download_id: {download_id}")
+                self.salvar_downloads_ativos()
+
                 if sidebar and sidebar.mounted:
                     try:
-                        info_dict = d.get("info_dict", {})
-                        video_id = info_dict.get("id", "")
                         if not video_id:
                             video_id = str(uuid.uuid4())
                             logger.warning(
                                 f"ID não encontrado nos metadados. Gerado ID: {video_id}")
+
                         if d["status"] == "downloading":
                             if video_id not in sidebar.items:
                                 title = info_dict.get(
@@ -118,6 +149,7 @@ class DownloadManager:
                                     subtitle=download_data["format"],
                                     thumbnail_url=download_data["thumbnail"],
                                     file_path=download_data["file_path"],
+                                    download_manager=self
                                 )
 
                             if "total_bytes" in d and "downloaded_bytes" in d:
@@ -128,8 +160,6 @@ class DownloadManager:
 
                         elif d["status"] == "finished":
                             try:
-                                info_dict = d.get("info_dict", {})
-                                video_id = info_dict.get("id", "")
                                 if not video_id:
                                     video_id = str(uuid.uuid4())
                                     logger.warning(
@@ -147,9 +177,10 @@ class DownloadManager:
                                     "format": format_selected,
                                     "file_path": file_path,
                                 }
-                                # Salva os dados do download
+
                                 salvar_downloads_bem_sucedidos_client(
                                     self.page, download_data)
+
                                 if video_id not in sidebar.items:
                                     sidebar.add_download_item(
                                         id=download_data["id"],
@@ -157,9 +188,9 @@ class DownloadManager:
                                         subtitle=download_data["format"],
                                         thumbnail_url=download_data["thumbnail"],
                                         file_path=download_data["file_path"],
+                                        download_manager=self
                                     )
 
-                                # Atualiza o item como concluído
                                 sidebar.update_download_item(
                                     video_id, 1.0, "finished")
 
@@ -179,18 +210,40 @@ class DownloadManager:
 
         try:
             start_download(link, formato, diretorio, progress_hook)
-        except Exception as e:
+
             with self.lock:
-                self.downloads[download_id] = {
-                    "status": "error", "error": str(e)}
-            logger.error(f"Erro ao iniciar o download: {e}")
-            if sidebar and sidebar.mounted:
-                try:
-                    sidebar.update_download_item(download_id, 0, "error")
-                except Exception as e:
-                    logger.error(
-                        f"Erro ao atualizar a UI após falha no download: {e}")
+                if download_id in self.cancelled_downloads:
+                    self.cancelled_downloads.remove(download_id)
+
+        except Exception as e:
+            if "cancelado pelo usuário" in str(e).lower():
+                logger.info(
+                    f"Download {download_id} foi cancelado com sucesso")
+            else:
+                with self.lock:
+                    self.downloads[download_id] = {
+                        "status": "error", "error": str(e)}
+                logger.error(f"Erro ao iniciar o download: {e}")
+                if sidebar and sidebar.mounted:
+                    try:
+                        info_dict = self.downloads.get(
+                            download_id, {}).get("info_dict", {})
+                        video_id = info_dict.get("id", download_id)
+                        sidebar.update_download_item(video_id, 0, "error")
+                    except Exception as e:
+                        logger.error(
+                            f"Erro ao atualizar a UI após falha no download: {e}")
         finally:
-            # Libera o semáforo após o download (independente do sucesso ou falha)
             self.semaphore.release()
-            download_in_progress = False
+
+            with self.lock:
+                if download_id in self.download_threads:
+                    del self.download_threads[download_id]
+
+                cancelled_to_remove = set()
+                for cancelled_id in self.cancelled_downloads:
+                    if cancelled_id not in [item.data.get("id") for item in sidebar.items.values() if sidebar.mounted]:
+                        cancelled_to_remove.add(cancelled_id)
+
+                for cancelled_id in cancelled_to_remove:
+                    self.cancelled_downloads.discard(cancelled_id)

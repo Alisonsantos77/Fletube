@@ -29,7 +29,6 @@ def setup_routes(page: ft.Page, download_manager: DownloadManager):
         page.views.append(
             ft.View(
                 route="/downloads",
-                scroll=ft.ScrollMode.AUTO,
                 drawer=create_drawer(page),
                 appbar=ft.AppBar(
                     bgcolor=ft.Colors.TRANSPARENT, actions=[
