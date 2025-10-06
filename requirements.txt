@@ -1,5 +1,0 @@
-flet
-python-dotenv
-pytz
-yt-dlp
-requests

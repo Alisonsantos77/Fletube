@@ -44,7 +44,8 @@ def verificar_status_usuario(page):
     for attempt in range(retries):
         try:
             logger.info(
-                f"Tentando acessar 'user_id' no clientStorage (tentativa {attempt + 1})...")
+                f"Tentando acessar 'user_id' no clientStorage (tentativa {attempt + 1})..."
+            )
 
             # Verifica se o 'user_id' está armazenado no clientStorage
             user_id = page.client_storage.get("user_id")
@@ -60,25 +61,28 @@ def verificar_status_usuario(page):
             last_checked = page.client_storage.get("last_checked") or 0
             current_time = time.time()
 
-            if cached_status and current_time - last_checked < 600:  # Cache válido por 10 minutos
+            if (
+                cached_status and current_time - last_checked < 600
+            ):  # Cache válido por 10 minutos
                 logger.info("Status do usuário obtido do cache.")
                 if cached_status == "inativo":
                     page.client_storage.clear()
                     page.go("/login")
                     logger.info(
-                        "Usuário inativo, redirecionando para a página de login.")
+                        "Usuário inativo, redirecionando para a página de login."
+                    )
                 return  # Usando o status do cache sem fazer outra requisição
 
             # Verifica o status do usuário
             if not user_is_active(user_id):
                 page.client_storage.clear()
                 page.go("/login")
-                logger.info(
-                    "Usuário inativo, redirecionando para a página de login.")
+                logger.info("Usuário inativo, redirecionando para a página de login.")
 
             # Cache o status do usuário e a hora da última verificação
             page.client_storage.set(
-                "user_status", "ativo" if user_is_active(user_id) else "inativo")
+                "user_status", "ativo" if user_is_active(user_id) else "inativo"
+            )
             page.client_storage.set("last_checked", current_time)
 
             break  # Se conseguiu, sai do loop
@@ -122,6 +126,8 @@ def apply_saved_theme_and_font(page: ft.Page):
 
 def main(page: ft.Page):
     logger.info("Iniciando Fletube")
+    page.window.min_width = 1600
+    page.window.min_height = 900
 
     # Verificar se o usuário está autenticado
     if not verify_auth(page):

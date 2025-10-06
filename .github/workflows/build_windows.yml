@@ -1,4 +1,4 @@
-name: 🛠 Build Windows App - Fletube
+name: 🖥 Build Windows EXE - Fletube
 
 on:
   push:
@@ -21,6 +21,7 @@ jobs:
       SUPABASE_URL_USERS: ${{ secrets.SUPABASE_URL_USERS }}
       SUPABASE_KEY_USERS: ${{ secrets.SUPABASE_KEY_USERS }}
 
+
     steps:
     - name: 🧾 Checkout do código
       uses: actions/checkout@v4
@@ -32,17 +33,25 @@ jobs:
 
     - name: 📦 Instalar dependências do projeto
       run: |
-        pip install --upgrade pip
-        pip install flet==0.28.3 yt-dlp python-dotenv pytz
+        pip install --upgrade pip wheel
+        pip install flet==0.28.3 python-dotenv requests yt-dlp
 
-    - name: ✅ Setup Flutter
-      uses: subosito/flutter-action@v2
+    - name: 🛠 Configurar MSBuild
+      uses: microsoft/setup-msbuild@v2
       with:
-        flutter-version: '3.24.3'
-        channel: stable
+        vs-version: '17.0'
 
-    - name: 🔎 Verificação do Flutter
-      run: flutter doctor -v
+    - name: 📦 Instalar Build Tools
+      run: choco install visualstudio2022-workload-vctools --no-progress
+
+    - name: 📁 Verificar estrutura de arquivos
+      run: |
+        echo "🔍 Verificando diretórios e arquivos:"
+        dir
+        echo "🔍 Verificando pyproject.toml:"
+        type pyproject.toml
+        echo "🔍 Verificando pasta assets:"
+        dir assets || echo "Pasta assets não encontrada"
 
     - name: 🔐 Criar arquivo .env para o build
       run: |
@@ -55,41 +64,25 @@ jobs:
         echo "SUPABASE_URL_USERS=$env:SUPABASE_URL_USERS" >> .env
         echo "SUPABASE_KEY_USERS=$env:SUPABASE_KEY_USERS" >> .env
 
-    - name: 🔐 Garantir variáveis no ambiente de build
+    - name: 🚀 Build Windows EXE com Flet
       run: |
-        echo "🔸 SECRET definida: $([string]::IsNullOrEmpty($env:SECRET) -eq $false)"
-        echo "🔸 EMAIL_USER definida: $([string]::IsNullOrEmpty($env:EMAIL_USER) -eq $false)"
-        echo "🔸 SUPABASE_URL_USERS definida: $([string]::IsNullOrEmpty($env:SUPABASE_URL_USERS) -eq $false)"
-
-    - name: 🛠 Configurar MSBuild
-      uses: microsoft/setup-msbuild@v2
-      with:
-        vs-version: '17.0'
-
-    - name: 📦 Instalar Build Tools
-      run: choco install visualstudio2022-workload-vctools --no-progress
-
-    - name: 🚀 Build Windows com Flet
-      run: |
-        echo "⚠️ Definindo código página UTF-8"
-        chcp 65001 >NUL
-        echo "🚀 Iniciando flet build windows"
-        flet build windows `
-          --project Fletube `
-          --product "Fletube" `
-          --description "Downloader inteligente de vídeos do YouTube" `
-          --output build/windows `
-          --compile-app -vv
+        flet build windows --project . --compile-app --splash-color "#0A1A2F" --splash-dark-color "#0A1A2F" -vv
 
     - name: 📁 Mostrar arquivos gerados
-      run: dir build\windows
+      run: |
+        echo "📦 Estrutura do build:"
+        dir build || echo "Pasta build não encontrada"
+        
+        echo "📱 EXE gerado:"
+        dir build\windows\release || echo "Nenhum EXE encontrado"
 
-    - name: 📤 Upload do artefato .exe
+    - name: 📤 Upload do EXE
       uses: actions/upload-artifact@v4
       with:
-        name: fletube-windows-${{ github.sha }}
-        path: build/windows/
+        name: exe-fletube-${{ github.sha }}
+        path: |
+          build\windows\release\**\*.exe
         retention-days: 30
 
     - name: ✅ Finalizado!
-      run: echo "✨ Executável gerado com sucesso! Verifique na aba Actions → Artifacts"
+      run: echo "✨ EXE gerado com sucesso! Verifique na aba Actions → Artifacts"

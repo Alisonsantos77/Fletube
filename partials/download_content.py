@@ -1,5 +1,3 @@
-# partials/download_content.py
-
 import flet as ft
 import threading
 import logging
@@ -41,15 +39,16 @@ def download_content(
     barra_progress_video_rf = ft.Ref[ft.ProgressBar]()
     input_link_rf = ft.Ref[ft.TextField]()
     dlg_modal_rf = ft.Ref[ft.AlertDialog]()
+    thumbnail_container_rf = ft.Ref[ft.Container]()
 
     dialog_open = {"value": False}
     last_clipboard_content = {"value": None}
 
     barra_de_progresso = ft.ProgressBar(
-        width=350,
-        height=8,
+        width=720,
+        height=3,
         color=ft.Colors.PRIMARY,
-        bgcolor=ft.Colors.ON_SURFACE,
+        bgcolor=ft.Colors.with_opacity(0.1, ft.Colors.PRIMARY),
         ref=barra_progress_video_rf,
         visible=False,
     )
@@ -61,17 +60,28 @@ def download_content(
             input_link_rf.current.update()
             return
         try:
-            status_text_rf.current.value = "Extraindo thumbnail..."
-            barra_progress_video_rf.current.value = 0.5
+            status_text_rf.current.value = "Extraindo informações..."
+            status_text_rf.current.color = ft.Colors.PRIMARY
+            barra_progress_video_rf.current.value = None
             barra_progress_video_rf.current.visible = True
+            status_text_rf.current.update()
             barra_progress_video_rf.current.update()
 
             thumb_url = extract_thumbnail_url(video_url)
+
+            thumbnail_container_rf.current.scale = 0.98
+            thumbnail_container_rf.current.opacity = 0.5
+            thumbnail_container_rf.current.update()
+
             img_downloader_rf.current.src = thumb_url
             img_downloader_rf.current.update()
 
-            status_text_rf.current.value = "Thumbnail atualizada."
-            status_text_rf.current.color = ft.Colors.PRIMARY
+            thumbnail_container_rf.current.scale = 1
+            thumbnail_container_rf.current.opacity = 1
+            thumbnail_container_rf.current.update()
+
+            status_text_rf.current.value = "Pronto para download"
+            status_text_rf.current.color = ft.Colors.GREEN
             status_text_rf.current.update()
 
             barra_progress_video_rf.current.value = 1.0
@@ -100,8 +110,7 @@ def download_content(
     def on_directory_selected(directory_path):
         if directory_path:
             page.client_storage.set("download_directory", directory_path)
-            status_text_rf.current.value = f"Diretório selecionado: {
-                directory_path}"
+            status_text_rf.current.value = f"Diretório: {directory_path}"
             status_text_rf.current.color = ft.Colors.PRIMARY
             status_text_rf.current.update()
             snackbar = ft.SnackBar(
@@ -137,17 +146,15 @@ def download_content(
             barra_progress_video_rf.current.update()
 
             download_manager.iniciar_download(
-                link, format_dropdown, diretorio, sidebar, page)
+                link, format_dropdown, diretorio, sidebar, page
+            )
 
         else:
-            status_text_rf.current.value = (
-                "Por favor, insira um link e escolha um formato."
-            )
+            status_text_rf.current.value = "Insira um link e escolha um formato"
             status_text_rf.current.color = ft.Colors.ERROR
             status_text_rf.current.update()
             snackbar = ft.SnackBar(
-                content=ft.Text(
-                    "Por favor, insira um link e escolha um formato."),
+                content=ft.Text("Por favor, insira um link e escolha um formato."),
                 bgcolor=ft.Colors.ERROR,
                 action="OK",
             )
@@ -155,7 +162,6 @@ def download_content(
             page.overlay.append(snackbar)
             snackbar.open = True
             page.update()
-
 
     def renderizar_lista_downloads_salvos(page, sidebar):
         downloads = recuperar_downloads_bem_sucedidos_client(page)
@@ -171,8 +177,7 @@ def download_content(
                 thumbnail = download.get("thumbnail", "/images/logo.png")
                 file_path = download.get("file_path", "")
                 logger.info(
-                    f"Adicionando download: ID: {download_id}, Título: {title}, Formato: {
-                        format}, Thumbnail: {thumbnail}, Caminho: {file_path}"
+                    f"Adicionando download: ID: {download_id}, Título: {title}, Formato: {format}, Thumbnail: {thumbnail}, Caminho: {file_path}"
                 )
                 sidebar.add_download_item(
                     id=download_id,
@@ -180,23 +185,22 @@ def download_content(
                     subtitle=format,
                     thumbnail_url=thumbnail,
                     file_path=file_path,
-                    download_manager=download_manager
+                    download_manager=download_manager,
                 )
         else:
             logger.warning("Nenhum download recuperado do client_storage.")
-        
+
     async def clipboard_reminder(page, status_text_rf):
         seconds = 60
         while seconds > 0:
             if status_text_rf.current is not None:
-                status_text_rf.current.value = f"Copie o link e passe o mouse na tela dentro de {
-                    seconds} segundos."
+                status_text_rf.current.value = f"Cole um link ({seconds}s)"
                 status_text_rf.current.update()
             seconds -= 1
             await asyncio.sleep(1)
         else:
             if status_text_rf.current is not None:
-                status_text_rf.current.value = "Faça o download do seu vídeo aqui!"
+                status_text_rf.current.value = "Cole um link do YouTube"
                 status_text_rf.current.update()
 
     def start_download_click(e):
@@ -204,9 +208,7 @@ def download_content(
         if diretorio and diretorio != "Nenhum diretório selecionado!":
             iniciar_download_apos_selecionar_diretorio(diretorio)
         else:
-            status_text_rf.current.value = (
-                "Nenhum diretório selecionado! Por favor, selecione um diretório."
-            )
+            status_text_rf.current.value = "Selecione um diretório primeiro"
             status_text_rf.current.color = ft.Colors.ERROR
             status_text_rf.current.update()
             snackbar = ft.SnackBar(
@@ -254,16 +256,15 @@ def download_content(
             youtube_link_pattern, clipboard_content
         ):
             if clipboard_content == last_clipboard_content["value"]:
-                logger.info(
-                    "Conteúdo do clipboard já foi processado anteriormente.")
+                logger.info("Conteúdo do clipboard já foi processado anteriormente.")
                 return
 
             if current_input_value:
                 if clipboard_content != current_input_value:
                     dialog_open["value"] = True
-                    dlg_modal_rf.current.title.value = "Epa, link novo à vista!✨"
+                    dlg_modal_rf.current.title.value = "Novo link detectado"
                     dlg_modal_rf.current.content.value = (
-                        "Vai querer atualizar com esse aí?"
+                        "Deseja atualizar com o link copiado?"
                     )
                     dlg_modal_rf.current.actions = [
                         ft.TextButton(
@@ -296,26 +297,51 @@ def download_content(
     file_picker = setup_file_picker(page, on_directory_selected)
 
     img_downloader = ft.Image(
-        src="/images/logo.png",
+        src="/images/banner.png",
         ref=img_downloader_rf,
-        width=400,
-        height=400,
+        width=770,
+        height=433,
         visible=True,
-        fit=ft.ImageFit.CONTAIN,
+        fit=ft.ImageFit.COVER,
+        border_radius=ft.border_radius.only(top_left=12, top_right=12),
+    )
+
+    thumbnail_container = ft.Container(
+        content=img_downloader,
+        width=770,
+        height=433,
+        padding=0,
+        animate_opacity=300,
+        animate_scale=ft.Animation(300, ft.AnimationCurve.EASE_OUT),
+        opacity=1,
+        scale=1,
+        ref=thumbnail_container_rf,
+    )
+
+    status_text = ft.Text(
+        value="Cole um link do YouTube",
+        color=ft.Colors.ON_SURFACE_VARIANT,
+        size=14,
+        ref=status_text_rf,
+        weight=ft.FontWeight.W_400,
+        text_align=ft.TextAlign.CENTER,
     )
 
     input_link = ft.TextField(
-        label="Digite o link do vídeo",
-        width=400,
+        label="Link do vídeo",
+        width=720,
         focused_border_color=ft.Colors.PRIMARY,
-        focused_bgcolor=ft.Colors.SECONDARY,
-        cursor_color=ft.Colors.ON_SURFACE,
-        content_padding=ft.padding.all(10),
-        hint_text="Cole o link do YouTube aqui...",
-        prefix_icon=ft.Icons.LINK,
+        border_color=ft.Colors.OUTLINE_VARIANT,
+        cursor_color=ft.Colors.PRIMARY,
+        content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
+        hint_text="Cole o link aqui",
+        prefix_icon=ft.Icons.LINK_ROUNDED,
         on_change=update_thumbnail,
         on_focus=check_clipboard_for_youtube_link,
         ref=input_link_rf,
+        text_size=14,
+        border_radius=8,
+        filled=True,
     )
 
     format_value = (
@@ -326,45 +352,154 @@ def download_content(
 
     format_dropdown = ft.Dropdown(
         ref=drop_format_rf,
-        label="Escolha o formato",
+        label="Formato",
         value=format_value,
         options=[
-            ft.dropdown.Option("mp4", "MP4"),
-            ft.dropdown.Option("mkv", "MKV"),
-            ft.dropdown.Option("webm", "WEBM"),
-            ft.dropdown.Option("mp3", "MP3"),
-            ft.dropdown.Option("wav", "WAV"),
-            ft.dropdown.Option("m4a", "M4A"),
+            ft.dropdown.Option("mp4", "MP4 - Vídeo"),
+            ft.dropdown.Option("mkv", "MKV - Vídeo"),
+            ft.dropdown.Option("webm", "WEBM - Vídeo"),
+            ft.dropdown.Option("mp3", "MP3 - Áudio"),
+            ft.dropdown.Option("wav", "WAV - Áudio"),
+            ft.dropdown.Option("m4a", "M4A - Áudio"),
         ],
         disabled=False,
+        width=345,
+        border_color=ft.Colors.OUTLINE_VARIANT,
+        focused_border_color=ft.Colors.PRIMARY,
+        border_radius=8,
+        content_padding=ft.padding.symmetric(horizontal=16, vertical=14),
+        text_size=14,
+        filled=True,
     )
 
     download_button = ft.ElevatedButton(
         text="Iniciar Download",
-        icon=ft.Icons.DOWNLOAD,
+        icon=ft.Icons.DOWNLOAD_ROUNDED,
         style=ft.ButtonStyle(
+            icon_size=20,
             bgcolor={
                 ft.ControlState.DEFAULT: ft.Colors.PRIMARY,
-                ft.ControlState.HOVERED: ft.Colors.ON_PRIMARY_CONTAINER,
+                ft.ControlState.HOVERED: ft.Colors.PRIMARY_CONTAINER,
             },
             color={
                 ft.ControlState.DEFAULT: ft.Colors.ON_PRIMARY,
-                ft.ControlState.HOVERED: ft.Colors.ON_SECONDARY,
+                ft.ControlState.HOVERED: ft.Colors.ON_PRIMARY_CONTAINER,
             },
             elevation={"pressed": 0, "": 1},
-            animation_duration=500,
-            shape=ft.RoundedRectangleBorder(radius=6),
+            animation_duration=200,
+            shape=ft.RoundedRectangleBorder(radius=8),
+            padding=ft.padding.symmetric(horizontal=24, vertical=14),
         ),
         on_click=start_download_click,
         ref=download_button_rf,
+        height=50,
+        width=345,
     )
 
-    status_text = ft.Text(
-        value="Faça o download do seu vídeo aqui!",
-        color=ft.Colors.PRIMARY,
-        size=18,
-        ref=status_text_rf,
-        weight=ft.FontWeight.BOLD,
+    # info_card = ft.Container(
+    #     content=ft.Column(
+    #         controls=[
+    #             ft.Row(
+    #                 controls=[
+    #                     ft.Icon(
+    #                         ft.Icons.INFO_OUTLINE, size=18, color=ft.Colors.PRIMARY
+    #                     ),
+    #                     ft.Text(
+    #                         "Como usar",
+    #                         size=15,
+    #                         weight=ft.FontWeight.W_600,
+    #                         color=ft.Colors.ON_SURFACE,
+    #                     ),
+    #                 ],
+    #                 spacing=8,
+    #             ),
+    #             ft.Container(height=4),
+    #             ft.Text(
+    #                 "Cole o link do YouTube no campo acima",
+    #                 size=13,
+    #                 color=ft.Colors.ON_SURFACE_VARIANT,
+    #             ),
+    #             ft.Text(
+    #                 "Escolha o formato desejado (vídeo ou áudio)",
+    #                 size=13,
+    #                 color=ft.Colors.ON_SURFACE_VARIANT,
+    #             ),
+    #             ft.Text(
+    #                 "Clique em Iniciar Download",
+    #                 size=13,
+    #                 color=ft.Colors.ON_SURFACE_VARIANT,
+    #             ),
+    #             ft.Container(height=12),
+    #             ft.Row(
+    #                 controls=[
+    #                     ft.Icon(
+    #                         ft.Icons.LIGHTBULB_OUTLINE, size=18, color=ft.Colors.AMBER
+    #                     ),
+    #                     ft.Text(
+    #                         "Dica",
+    #                         size=15,
+    #                         weight=ft.FontWeight.W_600,
+    #                         color=ft.Colors.ON_SURFACE,
+    #                     ),
+    #                 ],
+    #                 spacing=8,
+    #             ),
+    #             ft.Container(height=4),
+    #             ft.Text(
+    #                 "Ative o monitoramento de clipboard nas configurações para detectar links automaticamente",
+    #                 size=13,
+    #                 color=ft.Colors.ON_SURFACE_VARIANT,
+    #             ),
+    #         ],
+    #         spacing=4,
+    #     ),
+    #     padding=20,
+    #     border_radius=8,
+    #     border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT),
+    #     width=720,
+    # )
+
+    main_container = ft.Container(
+        content=ft.Column(
+            controls=[
+                thumbnail_container,
+                ft.Container(
+                    content=ft.Column(
+                        controls=[
+                            ft.Container(height=16),
+                            status_text,
+                            barra_de_progresso,
+                            ft.Container(height=16),
+                            input_link,
+                            ft.Container(height=12),
+                            ft.Row(
+                                controls=[
+                                    format_dropdown,
+                                    download_button,
+                                ],
+                                alignment=ft.MainAxisAlignment.CENTER,
+                                spacing=30,
+                            ),
+                            # ft.Container(height=24),
+                            # info_card,
+                        ],
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        spacing=0,
+                    ),
+                    padding=ft.padding.only(left=25, right=25, bottom=25),
+                ),
+            ],
+            spacing=0,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        ),
+        width=770,
+        border_radius=12,
+        shadow=ft.BoxShadow(
+            spread_radius=0,
+            blur_radius=30,
+            color=ft.Colors.with_opacity(0.15, ft.Colors.BLACK),
+            offset=ft.Offset(0, 10),
+        ),
     )
 
     container = ft.Container(
@@ -373,45 +508,12 @@ def download_content(
             alignment=ft.MainAxisAlignment.CENTER,
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
-                ft.ResponsiveRow(
-                    alignment=ft.MainAxisAlignment.CENTER,
-                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                    controls=[
-                        ft.Container(
-                            img_downloader,
-                            padding=5,
-                            col={"sm": 12, "md": 12, "xl": 12},
-                        ),
-                        ft.Container(
-                            status_text,
-                            padding=5,
-                            col={"sm": 10, "md": 10, "xl": 10},
-                            alignment=ft.alignment.center,
-                        ),
-                        ft.Container(
-                            barra_de_progresso,
-                            padding=5,
-                            col={"sm": 10, "md": 10, "xl": 10},
-                        ),
-                        ft.Container(
-                            input_link,
-                            padding=5,
-                            col={"sm": 10, "md": 6, "xl": 6},
-                        ),
-                        ft.Container(
-                            format_dropdown,
-                            padding=5,
-                            col={"sm": 10, "md": 6, "xl": 4},
-                        ),
-                        ft.Container(
-                            download_button,
-                            padding=5,
-                            col={"sm": 10, "md": 10, "xl": 10},
-                        ),
-                    ],
-                )
+                main_container,
             ],
+            spacing=0,
         ),
+        padding=ft.padding.all(40),
+        expand=True,
     )
 
     def on_layout(e):
@@ -421,9 +523,7 @@ def download_content(
     def start_clipboard_task():
         clipboard_monitoring = page.client_storage.get("clipboard_monitoring")
         if clipboard_monitoring:
-            page.run_async_task(
-                partial(clipboard_reminder, page, status_text_rf)
-            )
+            page.run_async_task(partial(clipboard_reminder, page, status_text_rf))
 
     container.on_layout = on_layout
 

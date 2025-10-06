@@ -1,0 +1,33 @@
+[project]
+name = "fletube"
+version = "1.0.0"
+description = "Aplicativo desktop Windows para download e gerenciamento de vídeos"
+authors = [
+    { name = "Alison Santos", email = "Alisondev77@hotmail.com" }
+]
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "flet==0.28.3",
+    "requests",
+    "python-dotenv",
+    "yt-dlp"
+]
+
+[tool.flet]
+org = "com.aldev"
+product = "Fletube"
+company = "Aldev"
+copyright = "Copyright (C) 2025 by Aldev"
+
+[tool.flet.app]
+path = "."
+
+[tool.flet.build]
+platform = "windows"
+
+[tool.flet.assets]
+assets = ["assets"]
+
+[tool.flet.desktop]
+icon = "assets/icon.png"
