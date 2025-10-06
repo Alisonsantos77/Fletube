@@ -21,7 +21,6 @@ jobs:
       SUPABASE_URL_USERS: ${{ secrets.SUPABASE_URL_USERS }}
       SUPABASE_KEY_USERS: ${{ secrets.SUPABASE_KEY_USERS }}
 
-
     steps:
     - name: 🧾 Checkout do código
       uses: actions/checkout@v4
@@ -33,25 +32,17 @@ jobs:
 
     - name: 📦 Instalar dependências do projeto
       run: |
-        pip install --upgrade pip wheel
+        pip install --upgrade pip
         pip install flet==0.28.3 python-dotenv requests yt-dlp
 
-    - name: 🛠 Configurar MSBuild
-      uses: microsoft/setup-msbuild@v2
+    - name: ✅ Setup Flutter
+      uses: subosito/flutter-action@v2
       with:
-        vs-version: '17.0'
+        flutter-version: '3.29.2'
+        channel: stable
 
-    - name: 📦 Instalar Build Tools
-      run: choco install visualstudio2022-workload-vctools --no-progress
-
-    - name: 📁 Verificar estrutura de arquivos
-      run: |
-        echo "🔍 Verificando diretórios e arquivos:"
-        dir
-        echo "🔍 Verificando pyproject.toml:"
-        type pyproject.toml
-        echo "🔍 Verificando pasta assets:"
-        dir assets || echo "Pasta assets não encontrada"
+    - name: 🔎 Verificação do Flutter
+      run: flutter doctor -v
 
     - name: 🔐 Criar arquivo .env para o build
       run: |
@@ -64,24 +55,54 @@ jobs:
         echo "SUPABASE_URL_USERS=$env:SUPABASE_URL_USERS" >> .env
         echo "SUPABASE_KEY_USERS=$env:SUPABASE_KEY_USERS" >> .env
 
-    - name: 🚀 Build Windows EXE com Flet
+    - name: 📸 Garantir variáveis no ambiente de build
       run: |
-        flet build windows --project . --compile-app --splash-color "#0A1A2F" --splash-dark-color "#0A1A2F" -vv
+        echo "📸 SECRET definida: $(if ($env:SECRET) { '✅' } else { '❌' })"
+        echo "📸 EMAIL_USER definida: $(if ($env:EMAIL_USER) { '✅' } else { '❌' })"
+        echo "📸 SMTP_SERVER definida: $(if ($env:SMTP_SERVER) { '✅' } else { '❌' })"
+      shell: pwsh
 
-    - name: 📁 Mostrar arquivos gerados
+    - name: 📁 Verificar estrutura de arquivos
+      run: |
+        echo "📂 Verificando estrutura do projeto:"
+        Get-ChildItem
+        echo ""
+        echo "📄 Verificando pyproject.toml:"
+        Get-Content pyproject.toml
+        echo ""
+        echo "🎨 Verificando pasta assets:"
+        if (Test-Path assets) { Get-ChildItem assets } else { echo "Pasta assets não encontrada" }
+      shell: pwsh
+
+    - name: 🚀 Build Windows EXE com Flet (usando pyproject.toml)
+      run: |
+        flet build windows `
+          --compile-app `
+          --splash-color "#0A1A2F" `
+          --splash-dark-color "#0A1A2F" `
+          -vv
+
+    - name: 📋 Mostrar arquivos gerados
       run: |
         echo "📦 Estrutura do build:"
-        dir build || echo "Pasta build não encontrada"
+        if (Test-Path build) { 
+          Get-ChildItem -Recurse build 
+        } else { 
+          echo "Pasta build não encontrada" 
+        }
         
-        echo "📱 EXE gerado:"
-        dir build\windows\release || echo "Nenhum EXE encontrado"
+        echo ""
+        echo "🖱 EXE gerado:"
+        Get-ChildItem -Recurse -Filter *.exe -ErrorAction SilentlyContinue | Select-Object FullName, @{Name="Size";Expression={"{0:N2} MB" -f ($_.Length / 1MB)}}
+      shell: pwsh
 
     - name: 📤 Upload do EXE
       uses: actions/upload-artifact@v4
       with:
         name: exe-fletube-${{ github.sha }}
         path: |
-          build\windows\release\**\*.exe
+          build/windows/**/*.exe
+          dist/*.exe
         retention-days: 30
 
     - name: ✅ Finalizado!

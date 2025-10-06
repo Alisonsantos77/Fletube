@@ -17,8 +17,8 @@ dependencies = [
 [tool.flet]
 org = "com.aldev"
 product = "Fletube"
-company = "Aldev"
-copyright = "Copyright (C) 2025 by Aldev"
+company = "Alison"
+copyright = "Copyright (C) 2025 by Alison"
 
 [tool.flet.app]
 path = "."
@@ -31,3 +31,6 @@ assets = ["assets"]
 
 [tool.flet.desktop]
 icon = "assets/icon.png"
+
+[tool.poetry]
+package-mode = false
