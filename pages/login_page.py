@@ -1,7 +1,9 @@
-import flet as ft
 from datetime import datetime, timezone
-from services.supabase_utils import validate_user, update_user_last_login
-import logging
+
+import flet as ft
+from loguru import logger
+
+from services.supabase_utils import update_user_last_login, validate_user
 
 
 def LoginPage(page: ft.Page):
@@ -39,7 +41,8 @@ def LoginPage(page: ft.Page):
     )
 
     input_senha = ft.TextField(
-        label="Senha", password=True,
+        label="Senha",
+        password=True,
         can_reveal_password=True,
         border_color=ft.Colors.BLUE_GREY_300,
         border_radius=8,
@@ -60,55 +63,45 @@ def LoginPage(page: ft.Page):
             )
             page.snack_bar.open = True
             page.update()
-            logging.info(f"Usuário encontrado: {user['username']}")
+            logger.info(f"Usuário encontrado: {user['username']}")
 
-            # Horário atual
             last_login = datetime.now(timezone.utc).isoformat()
-            update_user_last_login(user['id'], last_login)
+            update_user_last_login(user["id"], last_login)
 
-            # Armazenar os dados no client_storage
-            page.client_storage.set("user_id", user['id'])
+            page.client_storage.set("user_id", user["id"])
             page.client_storage.set("username", username)
             page.client_storage.set("ultimo_login", last_login)
-            page.client_storage.set("data_expiracao", user['data_expiracao'])
-            page.client_storage.set(
-                "subscription_type", user['subscription_type'])
-            page.client_storage.set("user_status", user['status'])
-            page.client_storage.set("telefone", user['telefone'])
-            page.client_storage.set("email", user['email'])
+            page.client_storage.set("data_expiracao", user["data_expiracao"])
+            page.client_storage.set("subscription_type", user["subscription_type"])
+            page.client_storage.set("user_status", user["status"])
+            page.client_storage.set("telefone", user["telefone"])
+            page.client_storage.set("email", user["email"])
             page.client_storage.set("autenticado", True)
 
-            # Criar uma lista com os valores que deseja armazenar
             user_info_list = [
-                user['id'],
+                user["id"],
                 username,
                 last_login,
-                user['data_expiracao'],
-                user['subscription_type'],
-                user['telefone'],
-                user['email'],
+                user["data_expiracao"],
+                user["subscription_type"],
+                user["telefone"],
+                user["email"],
             ]
 
-            # Armazenar a lista no client_storage
             page.client_storage.set("user_info", user_info_list)
-            logging.info(f"Dados coletados: {user_info_list} ")
+            logger.info(f"Dados coletados: {user_info_list}")
             page.go("/downloads")
 
         elif status == "inactive":
             page.snack_bar = ft.SnackBar(
-                content=ft.Text(
-                    "Sua conta expirou. Entre em contato com o suporte."
-                ),
+                content=ft.Text("Sua conta expirou. Entre em contato com o suporte."),
                 bgcolor=ft.Colors.RED_400,
-                # Falar com suporte
                 action="Falar com suporte",
-                on_action=lambda _: page.launch_url(
-                    "https://wa.link/tr8dei"
-                ),
+                on_action=lambda _: page.launch_url("https://wa.link/tr8dei"),
             )
             page.snack_bar.open = True
             page.update()
-            logging.warning(f"Usuário {username} expirado.")
+            logger.warning(f"Usuário {username} expirado.")
         else:
             page.snack_bar = ft.SnackBar(
                 content=ft.Text("Usuário ou senha inválidos."),
@@ -116,7 +109,7 @@ def LoginPage(page: ft.Page):
             )
             page.snack_bar.open = True
             page.update()
-            logging.warning("Usuário ou senha inválidos.")
+            logger.warning("Usuário ou senha inválidos.")
 
     login_button = ft.ElevatedButton(
         text="Entrar",
@@ -132,7 +125,7 @@ def LoginPage(page: ft.Page):
                 login_description,
                 input_username,
                 input_senha,
-                login_button
+                login_button,
             ],
             alignment=ft.MainAxisAlignment.CENTER,
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,

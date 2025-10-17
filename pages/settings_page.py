@@ -1,8 +1,10 @@
 import flet as ft
-from components.download_settings import DownloadSettings
+
 from components.appearence_settings import AppearanceSettings
-from components.general_settings import GeneralSettings
 from components.contact_settings import ContactSettings
+from components.download_settings import DownloadSettings
+from components.general_settings import GeneralSettings
+
 
 def SettingsPage(page: ft.Page):
     download_settings = DownloadSettings(page)

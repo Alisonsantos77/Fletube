@@ -1,50 +1,32 @@
-"""
-Configuração centralizada de logging para o Fletube.
-Evita duplicação de configurações em múltiplos arquivos.
-"""
-
-import logging
 import os
 from pathlib import Path
 
+from loguru import logger
+
 
 def setup_logging():
-    """
-    Configura o sistema de logging de forma centralizada.
-    Deve ser chamada apenas uma vez no início da aplicação.
-    """
     log_dir = Path("logs")
     log_dir.mkdir(exist_ok=True)
 
-    # Configuração principal
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-        handlers=[
-            logging.FileHandler("logs/app.log", encoding="utf-8"),
-            logging.StreamHandler()
-        ]
+    logger.remove()
+
+    logger.add(
+        "logs/app.log",
+        rotation="10 MB",
+        retention="7 days",
+        level="INFO",
+        format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
+        encoding="utf-8",
     )
 
-    # Configurar níveis específicos para bibliotecas externas
-    logging.getLogger("flet_core").setLevel(logging.WARNING)
-    logging.getLogger("urllib3").setLevel(logging.WARNING)
-    logging.getLogger("requests").setLevel(logging.WARNING)
+    logger.add(
+        lambda msg: print(msg, end=""),
+        level="INFO",
+        format="<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan> - <level>{message}</level>",
+    )
 
-    # Log de inicialização
-    logger = logging.getLogger(__name__)
     logger.info("Sistema de logging configurado com sucesso")
 
 
-def get_logger(name: str) -> logging.Logger:
-    """
-    Retorna um logger configurado para o módulo especificado.
-
-    Args:
-        name: Nome do módulo (geralmente __name__)
-
-    Returns:
-        Logger configurado
-    """
-    return logging.getLogger(name)
+def get_logger(name: str):
+    return logger.bind(name=name)

@@ -1,162 +1,279 @@
-import time
 import asyncio
-import flet as ft
-from services.supabase_utils import user_is_active
 import logging
+from typing import Optional
+
+import flet as ft
+
+logger = logging.getLogger(__name__)
 
 
-def handle_user_action(action, page):
-    if action == "Logout":
+class UserMenuManager:
+    """
+    Gerenciador de informações e ações do menu de usuário.
+    """
+
+    def __init__(self, page: ft.Page):
+        self.page = page
+        self.storage = page.session.get("app_storage")
+
+    def get_username(self) -> str:
+        """Retorna o nome do usuário."""
+        username = self.page.client_storage.get("username")
+        return username if username else "Usuário"
+
+    def get_user_initials(self) -> str:
+        """Retorna as iniciais do usuário."""
+        username = self.get_username()
+
+        if username == "Usuário":
+            return "F"
+
+        words = username.split()
+        if len(words) >= 2:
+            return f"{words[0][0]}{words[1][0]}".upper()
+
+        return username[0].upper()
+
+    def get_remaining_days(self) -> int:
+        """Retorna os dias restantes da assinatura."""
+        days = self.page.client_storage.get("dias_restantes")
+        return days if days is not None else 0
+
+    def get_subscription_type(self) -> str:
+        """Retorna o tipo de assinatura."""
+        subscription = self.page.client_storage.get("subscription_type")
+        return subscription if subscription else "Gratuito"
+
+    def get_avatar_url(self) -> str:
+        """Retorna a URL do avatar do usuário."""
+        username = self.get_username()
+        return f"https://robohash.org/{username}.png"
+
+    def logout(self):
+        """Realiza o logout do usuário."""
         try:
-            logging.info("Limpando clientStorage...")
-            page.client_storage.clear()
-            page.go("/login")
+            logger.info(f"Logout iniciado para usuário: {self.get_username()}")
+
+            self.page.client_storage.clear()
+
+            snack_bar = ft.SnackBar(
+                content=ft.Row(
+                    [
+                        ft.Icon(ft.Icons.LOGOUT),
+                        ft.Text("Logout realizado com sucesso!"),
+                    ]
+                ),
+                duration=2000,
+            )
+            self.page.overlay.append(snack_bar)
+            snack_bar.open = True
+            self.page.update()
+
+            self.page.go("/login")
+
+            logger.info("Logout concluído")
+
         except Exception as e:
-            logging.error(f"Erro ao realizar logout: {e}")
-    elif action == "Configurações":
-        page.go("/configuracoes")
-    elif action == "Perfil":
-        pass
+            logger.error(f"Erro ao realizar logout: {e}")
 
-# Contador regressivo para exibir o tempo restante da assinatura do usuário
+            error_snack = ft.SnackBar(
+                content=ft.Row(
+                    [
+                        ft.Icon(ft.Icons.ERROR),
+                        ft.Text("Erro ao realizar logout"),
+                    ]
+                ),
+            )
+            self.page.overlay.append(error_snack)
+            error_snack.open = True
+            self.page.update()
 
 
-class CountDown(ft.Text):
-    def __init__(self, segundos):
+class CountdownTimer(ft.Text):
+    """
+    Componente de countdown para exibir tempo restante da assinatura.
+    """
+
+    def __init__(self, total_seconds: int):
         super().__init__()
-        self.segundos = segundos
+        self.total_seconds = total_seconds
+        self.running = False
 
     def did_mount(self):
-        self.executando = True
-        self.page.run_task(self.atualizar_timer)
+        """Callback quando o componente é montado."""
+        self.running = True
+        self.page.run_task(self._update_countdown)
 
     def will_unmount(self):
-        self.executando = False
+        """Callback quando o componente está prestes a ser desmontado."""
+        self.running = False
 
-    async def atualizar_timer(self):
-        while self.segundos and self.executando:
-            # Cálculo de dias, horas, minutos e segundos restantes
-            dias, resto_segundos = divmod(
-                self.segundos, 86400)  # 86400 segundos em um dia
-            horas, resto_segundos = divmod(
-                resto_segundos, 3600)  # 3600 segundos em uma hora
-            # 60 segundos em um minuto
-            minutos, segundos = divmod(resto_segundos, 60)
+    async def _update_countdown(self):
+        """Atualiza o countdown a cada segundo."""
+        while self.total_seconds > 0 and self.running:
+            days, remaining = divmod(self.total_seconds, 86400)
+            hours, remaining = divmod(remaining, 3600)
+            minutes, seconds = divmod(remaining, 60)
 
-            # Formatação para exibir como 'xd xh xm xs'
-            self.value = f"{dias}d {horas}h {minutos}m {segundos}s"
-            self.update()
+            self.value = f"{days}d {hours}h {minutes}m {seconds}s"
+
+            try:
+                self.update()
+            except Exception as e:
+                logger.error(f"Erro ao atualizar countdown: {e}")
+                break
+
             await asyncio.sleep(1)
-            self.segundos -= 1
+            self.total_seconds -= 1
+
+        if self.total_seconds <= 0 and self.running:
+            self.value = "Assinatura expirada"
+            try:
+                self.update()
+            except Exception:
+                pass
 
 
 def create_user_menu(page: ft.Page):
-    username = page.client_storage.get("username")
-    restantes = page.client_storage.get("dias_restantes")
-    assinatura = page.client_storage.get("subscription_type")
+    """
+    Cria o menu de usuário com informações e ações.
 
-    if restantes is None:
-        restantes = 0
+    Args:
+        page: Instância da página Flet
 
-    # Iniciais do usuário
-    user_initials = username[0].upper() if username else "Fletube"
+    Returns:
+        ft.PopupMenuButton: Menu do usuário configurado
+    """
+
+    manager = UserMenuManager(page)
+
+    def handle_action(action: str):
+        """Handler para ações do menu."""
+        if action == "logout":
+            manager.logout()
+        elif action == "settings":
+            page.go("/configuracoes")
+        elif action == "profile":
+            logger.info("Perfil selecionado (funcionalidade futura)")
+
+    username = manager.get_username()
+    user_initials = manager.get_user_initials()
+    remaining_days = manager.get_remaining_days()
+    subscription_type = manager.get_subscription_type()
+    avatar_url = manager.get_avatar_url()
+
+    remaining_seconds = remaining_days * 86400
+
+    menu_items = [
+        ft.PopupMenuItem(
+            content=ft.Row(
+                controls=[
+                    ft.Icon(
+                        ft.Icons.PERSON,
+                        size=20,
+                    ),
+                    ft.Text(username, size=14, weight=ft.FontWeight.W_500),
+                ],
+                spacing=12,
+            ),
+            on_click=lambda e: handle_action("profile"),
+        ),
+        ft.Divider(height=1),
+        ft.PopupMenuItem(
+            content=ft.Row(
+                controls=[
+                    ft.Icon(ft.Icons.CARD_MEMBERSHIP, size=20),
+                    ft.Column(
+                        controls=[
+                            ft.Text(
+                                subscription_type,
+                                size=14,
+                                weight=ft.FontWeight.W_500,
+                            ),
+                            ft.Text(
+                                "Tipo de Assinatura",
+                                size=11,
+                                italic=True,
+                            ),
+                        ],
+                        spacing=2,
+                    ),
+                ],
+                spacing=12,
+            ),
+        ),
+        ft.PopupMenuItem(
+            content=ft.Row(
+                controls=[
+                    ft.Icon(ft.Icons.TIMER, size=20),
+                    ft.Column(
+                        controls=[
+                            (
+                                CountdownTimer(remaining_seconds)
+                                if remaining_days > 0
+                                else ft.Text("Expirado", size=14)
+                            ),
+                            ft.Text(
+                                "Tempo Restante",
+                                size=11,
+                                italic=True,
+                            ),
+                        ],
+                        spacing=2,
+                    ),
+                ],
+                spacing=12,
+            ),
+        ),
+        ft.Divider(height=1),
+        ft.PopupMenuItem(
+            content=ft.Row(
+                controls=[
+                    ft.Icon(ft.Icons.SETTINGS, size=20),
+                    ft.Text("Configurações", size=14),
+                ],
+                spacing=12,
+            ),
+            on_click=lambda e: handle_action("settings"),
+        ),
+        ft.PopupMenuItem(
+            content=ft.Row(
+                controls=[
+                    ft.Icon(ft.Icons.LOGOUT, size=20),
+                    ft.Text("Sair", size=14),
+                ],
+                spacing=12,
+            ),
+            on_click=lambda e: handle_action("logout"),
+        ),
+    ]
+
+    avatar_stack = ft.Stack(
+        controls=[
+            ft.CircleAvatar(
+                foreground_image_src=avatar_url,
+                content=ft.Text(
+                    user_initials,
+                    size=18,
+                    weight=ft.FontWeight.BOLD,
+                ),
+                radius=20,
+            ),
+            ft.Container(
+                content=ft.CircleAvatar(
+                    radius=6,
+                ),
+                alignment=ft.alignment.bottom_right,
+            ),
+        ],
+        width=40,
+        height=40,
+    )
 
     return ft.PopupMenuButton(
         content=ft.Container(
-            content=ft.Stack(
-                [
-                    ft.CircleAvatar(
-                        foreground_image_src="https://robohash.org/{username}.png",
-                        content=ft.Text(user_initials),
-                    ),
-                    ft.Container(
-                        content=ft.CircleAvatar(
-                            bgcolor=ft.Colors.GREEN, radius=5),
-                        alignment=ft.alignment.bottom_left,
-                    ),
-                ],
-                width=40,
-                height=40,
-            ),
+            content=avatar_stack,
             tooltip=f"Logado como {username}",
         ),
-        items=[
-            ft.PopupMenuItem(
-                content=ft.Row(
-                    controls=[
-                        ft.Icon(
-                            name=ft.Icons.PERSON_4_SHARP,
-                            size=20,
-                            color=ft.Colors.BLUE_GREY_500,
-                        ),
-                        ft.Text(
-                            value=f"{username}",
-                            size=14,
-                        ),
-                    ]
-                ),
-                on_click=lambda e: handle_user_action("Perfil", page),
-            ),
-            ft.PopupMenuItem(
-                content=ft.Row(
-                    controls=[
-                        ft.Icon(
-                            name=ft.Icons.CALENDAR_MONTH_ROUNDED,
-                            size=20,
-                            color=ft.Colors.BLUE_GREY_500,
-                        ),
-                        ft.Text(
-                            value=f"{assinatura}",
-                            size=14,
-                        ),]
-                ),
-            ),
-            ft.PopupMenuItem(
-                content=ft.Row(
-                    controls=[
-                        ft.Icon(
-                            name=ft.Icons.TIMER,
-                            size=20,
-                            color=ft.Colors.BLUE_GREY_500,
-                        ),
-                        CountDown(
-                            segundos=restantes * 86400) if restantes else ft.Text(value="Carregando...", size=14),
-                    ]
-                ),
-            ),
-            ft.PopupMenuItem(
-                content=ft.Row(
-                    controls=[
-                        ft.Icon(
-                            name=ft.Icons.SETTINGS,
-                            size=20,
-                            color=ft.Colors.BLUE_GREY_500,
-                        ),
-                        ft.Text(
-                            value="Configurações",
-                            size=14,
-                        ),
-                    ]
-                ),
-                on_click=lambda e: handle_user_action("Configurações", page),
-            ),
-            ft.PopupMenuButton(),
-            ft.PopupMenuItem(
-                content=ft.Row(
-                    controls=[
-                        ft.Icon(
-                            name=ft.Icons.LOGOUT_SHARP,
-                            size=20,
-                            color=ft.Colors.RED,
-                        ),
-                        ft.Text(
-                            value="Sair",
-                            size=14,
-                            color=ft.Colors.RED,
-                        ),
-                    ]
-                ),
-                on_click=lambda e: handle_user_action("Logout", page),
-            ),
-        ],
+        items=menu_items,
     )

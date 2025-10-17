@@ -11,26 +11,25 @@ dependencies = [
     "flet==0.28.3",
     "requests",
     "python-dotenv",
-    "yt-dlp"
+    "yt-dlp",
+    "pytz",
+    "cryptography",
+    "supabase",
+    "loguru",
 ]
 
 [tool.flet]
+name = "fletube"
 org = "com.aldev"
 product = "Fletube"
 company = "Alison"
 copyright = "Copyright (C) 2025 by Alison"
 
-[tool.flet.app]
-path = "."
-
-[tool.flet.build]
-platform = "windows"
+[tool.flet.windows]
+icon = "assets/icon.png"
 
 [tool.flet.assets]
-assets = ["assets"]
-
-[tool.flet.desktop]
-icon = "assets/icon.png"
+src = "assets"
 
 [tool.poetry]
 package-mode = false

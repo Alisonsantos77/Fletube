@@ -1,110 +1,116 @@
 import logging
-import time
-import flet as ft
-from routes import setup_routes
-from services.send_feedback import (
-    retry_failed_feedbacks,
-    send_feedback_email,
-    clean_feedback_backup,
-)
-from services.download_manager import DownloadManager
 from datetime import datetime, timezone
-from services.supabase_utils import user_is_active
-from utils.validations import verify_auth
-from utils.logging_config import setup_logging, get_logger
+from pathlib import Path
 
-# Configuração centralizada de logging
+import flet as ft
+
+from routes import setup_routes
+from services.download_manager import DownloadManager
+from services.send_feedback import retry_failed_feedbacks
+from services.storage_service import FletubeStorage
+from services.supabase_utils import user_is_active
+from utils.logging_config import get_logger, setup_logging
+from utils.validations import AuthValidator
+
 setup_logging()
 logger = get_logger(__name__)
 
 
-def verificar_status_usuario(page):
-    """
-    Função que verifica o status do usuário, fazendo várias tentativas para acessar o 'user_id' no clientStorage e
-    validando se o usuário está ativo ou não. A função aplica um backoff exponencial em caso de falhas ao tentar
-    acessar os dados do usuário.
+class AppState:
+    def __init__(self, page: ft.Page):
+        self.page = page
+        self.storage = FletubeStorage()
+        self.download_manager = DownloadManager(page)
 
-    O processo inclui:
-    1. Verificar o 'user_id' no clientStorage.
-    2. Usar um cache de status do usuário válido por 10 minutos para evitar chamadas repetitivas ao backend.
-    3. Se o status do usuário não for encontrado ou o usuário for inativo, redireciona para a página de login.
-    4. Caso contrário, a função armazena o status do usuário e a hora da última verificação no clientStorage.
+        self._initialize_defaults()
 
-    Parâmetros:
-    page (ft.Page): A página atual da aplicação, usada para acessar o clientStorage e navegar entre páginas.
+    def _initialize_defaults(self):
+        if not self.storage.get_setting("initialized"):
+            logger.info("Primeira execução detectada, configurando padrões...")
 
-    Exceções:
-    Se ocorrer um erro durante o processo, ele será registrado no log.
-    """
-    retries = 5
-    initial_delay = 5
-    max_delay = 32  # O backoff exponencial não deve exceder 32 segundos
-    delay = initial_delay
+            defaults = {
+                "theme_mode": "LIGHT",
+                "font_family": "Padrão",
+                "clipboard_monitoring": True,
+                "default_format": "mp4",
+                "initialized": True,
+            }
 
-    for attempt in range(retries):
+            for key, value in defaults.items():
+                self.storage.set_setting(key, value)
+
+            logger.info("Configurações padrão aplicadas com sucesso")
+
+
+def verificar_status_usuario(page: ft.Page, max_retries: int = 3) -> bool:
+    for attempt in range(1, max_retries + 1):
         try:
             logger.info(
-                f"Tentando acessar 'user_id' no clientStorage (tentativa {attempt + 1})..."
+                f"Verificando status do usuário (tentativa {attempt}/{max_retries})"
             )
 
-            # Verifica se o 'user_id' está armazenado no clientStorage
             user_id = page.client_storage.get("user_id")
 
-            if user_id is None:
-                logger.error("Chave 'user_id' não encontrada.")
+            if not user_id:
+                logger.error("user_id não encontrado, redirecionando para login")
                 page.client_storage.clear()
                 page.go("/login")
-                return
+                return False
 
-            # Verifica se o status do usuário foi armazenado em cache e se está recente
             cached_status = page.client_storage.get("user_status")
             last_checked = page.client_storage.get("last_checked") or 0
-            current_time = time.time()
+            current_time = datetime.now(timezone.utc).timestamp()
 
-            if (
-                cached_status and current_time - last_checked < 600
-            ):  # Cache válido por 10 minutos
-                logger.info("Status do usuário obtido do cache.")
+            cache_ttl = 600
+            if cached_status and (current_time - last_checked) < cache_ttl:
+                logger.info("Status do usuário obtido do cache")
+
                 if cached_status == "inativo":
                     page.client_storage.clear()
                     page.go("/login")
-                    logger.info(
-                        "Usuário inativo, redirecionando para a página de login."
-                    )
-                return  # Usando o status do cache sem fazer outra requisição
+                    return False
 
-            # Verifica o status do usuário
-            if not user_is_active(user_id):
-                page.client_storage.clear()
-                page.go("/login")
-                logger.info("Usuário inativo, redirecionando para a página de login.")
+                return True
 
-            # Cache o status do usuário e a hora da última verificação
-            page.client_storage.set(
-                "user_status", "ativo" if user_is_active(user_id) else "inativo"
-            )
+            is_active = user_is_active(user_id)
+
+            status = "ativo" if is_active else "inativo"
+            page.client_storage.set("user_status", status)
             page.client_storage.set("last_checked", current_time)
 
-            break  # Se conseguiu, sai do loop
+            if not is_active:
+                logger.warning(f"Usuário {user_id} está inativo")
+                page.client_storage.clear()
+                page.go("/login")
+                return False
+
+            logger.info(f"Usuário {user_id} verificado com sucesso")
+            return True
 
         except Exception as e:
-            logger.error(f"Erro ao verificar o status do usuário: {e}")
-            # Aplica o backoff exponencial entre as tentativas
-            # Limita o delay máximo a max_delay
-            time.sleep(min(delay, max_delay))
-            delay *= 2  # Dobra o tempo de espera a cada falha
+            logger.error(
+                f"Erro ao verificar status do usuário (tentativa {attempt}): {e}"
+            )
+
+            if attempt < max_retries:
+                import time
+
+                delay = 2**attempt
+                time.sleep(min(delay, 8))
+            else:
+                logger.critical("Falha permanente na verificação do usuário")
+                return False
+
+    return False
 
 
-def apply_saved_theme_and_font(page: ft.Page):
-    # Carregar e aplicar o tema salvo no client_storage
-    theme_mode_value = page.client_storage.get("theme_mode") or "LIGHT"
-    page.theme_mode = (
-        ft.ThemeMode.DARK if theme_mode_value == "DARK" else ft.ThemeMode.LIGHT
-    )
-    logger.info(f"Tema carregado: {page.theme_mode}")
+def apply_theme_and_fonts(page: ft.Page, app_state: AppState):
+    theme_mode = app_state.storage.get_setting("theme_mode", "LIGHT")
+    page.theme_mode = ft.ThemeMode.DARK if theme_mode == "DARK" else ft.ThemeMode.LIGHT
+    logger.info(f"Tema aplicado: {theme_mode}")
 
-    # Carregar e aplicar a fonte salva no client_storage
-    font_family_value = page.client_storage.get("font_family") or "Padrão"
+    font_family = app_state.storage.get_setting("font_family", "Padrão")
+
     page.fonts = {
         "Kanit": "/fonts/Kanit.ttf",
         "Open Sans": "/fonts/OpenSans.ttf",
@@ -114,86 +120,121 @@ def apply_saved_theme_and_font(page: ft.Page):
         "EmOne-SemiBold": "/fonts/EmOne-SemiBold.otf",
         "Gadner": "/fonts/Gadner.ttf",
     }
+
     page.theme = (
-        ft.Theme(font_family=font_family_value)
-        if font_family_value != "Padrão"
-        else ft.Theme()
+        ft.Theme(font_family=font_family) if font_family != "Padrão" else ft.Theme()
     )
-    logger.info(f"Fonte carregada: {font_family_value}")
+    logger.info(f"Fonte aplicada: {font_family}")
 
     page.update()
 
 
-def main(page: ft.Page):
-    logger.info("Iniciando Fletube")
+def setup_window_properties(page: ft.Page):
     page.window.min_width = 1600
     page.window.min_height = 900
-
-    # Verificar se o usuário está autenticado
-    if not verify_auth(page):
-        logger.info("Usuário não autenticado")
-        page.snack_bar = ft.SnackBar(
-            content=ft.Text("Faça login para acessar esta página."),
-            bgcolor=ft.Colors.RED_400,
-        )
-        page.snack_bar.open = True
-        page.go("/login")
-
-    download_manager = DownloadManager(page)
-
-    # Tenta enviar feedbacks locais ao iniciar
-    retry_failed_feedbacks(page)
-
-    # Carregar e aplicar tema e fonte salvos antes de configurar a interface
-    apply_saved_theme_and_font(page)
-
-    # Configuração do título da página
     page.title = "Fletube"
 
-    # Configuração de rotas, passando o DownloadManager
-    setup_routes(page, download_manager)
 
-    # Função para alternar tema
-    def alternar_tema(e):
-        current_theme = page.client_storage.get("theme_mode") or "LIGHT"
-        new_theme_mode = (
-            ft.ThemeMode.LIGHT if current_theme == "DARK" else ft.ThemeMode.DARK
+def setup_keyboard_shortcuts(page: ft.Page, app_state: AppState):
+    def toggle_theme():
+        current_theme = app_state.storage.get_setting("theme_mode", "LIGHT")
+        new_theme = "DARK" if current_theme == "LIGHT" else "LIGHT"
+
+        page.theme_mode = (
+            ft.ThemeMode.DARK if new_theme == "DARK" else ft.ThemeMode.LIGHT
         )
-        page.theme_mode = new_theme_mode
-        page.client_storage.set("theme_mode", new_theme_mode.name)
+        app_state.storage.set_setting("theme_mode", new_theme)
         page.update()
 
-    # Configuração de evento de ciclo de vida da aplicação
+        logger.info(f"Tema alternado para: {new_theme}")
+
+    def on_key_event(e: ft.KeyboardEvent):
+        key = e.key.lower()
+
+        shortcuts = {
+            "f1": "/downloads",
+            "f2": "/historico",
+            "f3": "/configuracoes",
+            "f4": lambda: toggle_theme(),
+        }
+
+        action = shortcuts.get(key)
+
+        if action:
+            if callable(action):
+                action()
+            else:
+                page.go(action)
+
+    page.on_keyboard_event = on_key_event
+
+
+def setup_lifecycle_handler(page: ft.Page):
     def handle_lifecycle_change(e: ft.AppLifecycleStateChangeEvent):
         if e.data == "inactive":
             logger.info("Aplicação em segundo plano")
             page.session.set("app_in_background", True)
-            # Verifica o status do usuário
             verificar_status_usuario(page)
+
         elif e.data == "active":
             logger.info("Aplicação voltou ao primeiro plano")
             page.session.set("app_in_background", False)
             page.update()
 
-    # Atribuir o manipulador de ciclo de vida ao evento
     page.on_app_lifecycle_state_change = handle_lifecycle_change
 
-    # Configurar evento de teclado para atalhos de navegação
-    def on_key_event(e: ft.KeyboardEvent):
-        if e.key.lower() == "f4":
-            alternar_tema(None)
-        elif e.key.lower() == "f1":
-            page.go("/downloads")
-        elif e.key.lower() == "f2":
-            page.go("/historico")
-        elif e.key.lower() == "f3":
-            page.go("/configuracoes")
 
-    page.on_keyboard_event = on_key_event
+def initialize_app_services(page: ft.Page):
+    retry_failed_feedbacks(page)
+    logger.info("Tentativa de envio de feedbacks locais concluída")
+
+
+def main(page: ft.Page):
+    logger.info("🚀 Iniciando Fletube")
+
+    setup_window_properties(page)
+
+    if not AuthValidator.verify_auth(page):
+        logger.warning("Usuário não autenticado, redirecionando para login")
+
+        snack_bar = ft.SnackBar(
+            content=ft.Text("Faça login para acessar esta página."),
+            bgcolor=ft.Colors.RED_400,
+        )
+        page.overlay.append(snack_bar)
+        snack_bar.open = True
+        page.update()
+        page.go("/login")
+        return
+
+    app_state = AppState(page)
+
+    # acesso global
+    page.session.set("app_storage", app_state.storage)
+    page.session.set("download_manager", app_state.download_manager)
+
+    apply_theme_and_fonts(page, app_state)
+
+    setup_routes(page, app_state.download_manager)
+
+    setup_keyboard_shortcuts(page, app_state)
+    setup_lifecycle_handler(page)
+
+    initialize_app_services(page)
+
+    storage_info = app_state.storage.get_storage_info()
+    logger.info(
+        f"📊 Storage Info: {storage_info['downloads_count']} downloads, "
+        f"{storage_info['settings_count']} configurações salvas"
+    )
 
     page.update()
 
+    logger.info("✅ Fletube inicializado com sucesso")
+
 
 if __name__ == "__main__":
-    logger.info("Inicializando aplicação Fletube")
+    logger.info("=" * 60)
+    logger.info("Fletube - Sistema de Download do YouTube")
+    logger.info("=" * 60)
     ft.app(target=main, assets_dir="assets")

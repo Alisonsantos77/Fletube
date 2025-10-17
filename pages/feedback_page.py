@@ -1,35 +1,17 @@
-# feedback_page.py
+import os
 
 import flet as ft
-import logging
-import os
-import re
-import requests
-from utils.validations import validar_email
+from loguru import logger
 
 from services.send_feedback import send_feedback_email
+from utils.validations import EmailValidator
 
-# Configuração de logging
-logging.basicConfig(
-    filename="logs/app.log",
-    format="%(asctime)s %(levelname)s: %(message)s",
-    level=logging.INFO,
-)
-logging.getLogger("flet_core").setLevel(logging.INFO)  # Log para flet_core
-
-logger = logging.getLogger(__name__)
-
-# Variáveis de ambiente
 FEEDBACK_RECIPIENT_EMAIL = os.getenv("FEEDBACK_RECIPIENT_EMAIL")
 
 
 def FeedbackPage(page: ft.Page):
     email_in_app = page.client_storage.get("email")
-    """
-    Página de feedback com sistema de avaliação em etapas.
-    """
 
-    # Variável mutável para rastrear a etapa atual
     current_step = [0]
     user_data = {}
 
@@ -64,8 +46,9 @@ def FeedbackPage(page: ft.Page):
     def validate_current_step():
         if current_step[0] == 0:
             email = email_input.value.strip()
-            if not validar_email(email):
-                email_input.error_text = "Por favor, insira um e-mail válido."
+            result = EmailValidator.validate(email)
+            if not result:
+                email_input.error_text = str(result)
                 email_input.update()
                 logger.warning("E-mail inválido.")
                 return False
@@ -89,8 +72,7 @@ def FeedbackPage(page: ft.Page):
             user_data["category"] = category_radio_group.value
             user_data["subcategory"] = subcategory_radio_group.value
             logger.info(f"Categoria selecionada: {user_data['category']}")
-            logger.info(
-                f"Subcategoria selecionada: {user_data['subcategory']}")
+            logger.info(f"Subcategoria selecionada: {user_data['subcategory']}")
             return True
         elif current_step[0] == 3:
             user_data["feedback_text"] = feedback_input.value.strip()
@@ -104,23 +86,19 @@ def FeedbackPage(page: ft.Page):
             user_email=user_data["email"], user_message=user_data, page=page
         )
         if success:
-            snack_bar = ft.SnackBar(content=ft.Text(
-                "Feedback enviado com sucesso!"))
-            page.overlay.append(snack_bar)
-            snack_bar.open = True
+            from utils.ui_helpers import show_success_snackbar
+
+            show_success_snackbar(page, "Feedback enviado com sucesso!")
             logger.info("Feedback enviado com sucesso.")
             current_step[0] = 0
             reset_feedback()
             update_view()
             page.go("/downloads")
         else:
-            snack_bar = ft.SnackBar(
-                content=ft.Text("Erro ao enviar o feedback. Tente novamente.")
-            )
-            page.overlay.append(snack_bar)
-            snack_bar.open = True
+            from utils.ui_helpers import show_error_snackbar
+
+            show_error_snackbar(page, "Erro ao enviar o feedback. Tente novamente.")
             logger.error("Falha ao enviar o feedback.")
-        page.update()
 
     def update_review():
         email = user_data.get("email", "")
@@ -152,7 +130,6 @@ def FeedbackPage(page: ft.Page):
         page.update()
         logger.info("Formulário de feedback reiniciado.")
 
-    # -------- Passo 1: E-mail --------
     email_input = ft.TextField(
         label="Seu E-mail",
         hint_text="exemplo@dominio.com",
@@ -177,7 +154,6 @@ def FeedbackPage(page: ft.Page):
         visible=True,
     )
 
-    # -------- Passo 2: Avaliação por Estrelas --------
     selected_rating = [0]
     stars_ref = []
 
@@ -193,8 +169,7 @@ def FeedbackPage(page: ft.Page):
                 star.icon = ft.Icons.STAR_OUTLINE
                 star.icon_color = ft.Colors.GREY
             star.update()
-        logger.info(
-            f"Estrelas atualizadas: {selected_rating[0]} selecionadas.")
+        logger.info(f"Estrelas atualizadas: {selected_rating[0]} selecionadas.")
 
     def on_star_click(e):
         selected_index = int(e.control.data)
@@ -232,7 +207,6 @@ def FeedbackPage(page: ft.Page):
         visible=False,
     )
 
-    # -------- Passo 3: Categoria e Subcategoria --------
     category_radio_group = ft.RadioGroup(
         content=ft.Row(
             [
@@ -279,7 +253,6 @@ def FeedbackPage(page: ft.Page):
         visible=False,
     )
 
-    # -------- Passo 4: Feedback Adicional --------
     feedback_input = ft.TextField(
         label="Feedback (opcional)",
         hint_text="Digite seu feedback aqui",
@@ -308,16 +281,13 @@ def FeedbackPage(page: ft.Page):
         visible=False,
     )
 
-    # -------- Passo 5: Revisão e Envio --------
     review_text = ft.Markdown("")
 
-    submit_button = ft.ElevatedButton(
-        "Enviar Feedback", on_click=submit_feedback)
+    submit_button = ft.ElevatedButton("Enviar Feedback", on_click=submit_feedback)
 
     step5 = ft.Column(
         [
-            ft.Text("Etapa 5 de 5: Revisão", size=20,
-                    weight=ft.FontWeight.BOLD),
+            ft.Text("Etapa 5 de 5: Revisão", size=20, weight=ft.FontWeight.BOLD),
             review_text,
             ft.Row(
                 [
@@ -332,10 +302,8 @@ def FeedbackPage(page: ft.Page):
         visible=False,
     )
 
-    # Listagem das etapas
     steps_views = [step1, step2, step3, step4, step5]
 
-    # Container com animação para transições
     container_steps = ft.Container(
         content=ft.Column(
             steps_views,
@@ -345,5 +313,6 @@ def FeedbackPage(page: ft.Page):
         animate=ft.animation.Animation(500, ft.AnimationCurve.EASE_IN_OUT),
     )
 
+    update_view()
+
     return container_steps
-    update_view()  # Inicializa a primeira view

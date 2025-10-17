@@ -1,17 +1,14 @@
 import flet as ft
+from loguru import logger
+
 from partials.download_content import download_content
 from partials.download_sidebar import SidebarList
 from services.download_manager import DownloadManager
-import logging
-
-logger = logging.getLogger(__name__)
 
 
 def DownloadPage(page: ft.Page, download_manager: DownloadManager):
-    # Inicializa a SidebarList
     sidebar = SidebarList(page)
 
-    # Inicializa o conteúdo da página, passando o download_manager
     content = download_content(page, sidebar, download_manager)
 
     def on_unmount(e):
@@ -37,7 +34,6 @@ def DownloadPage(page: ft.Page, download_manager: DownloadManager):
         right=False,
     )
 
-    # Atribui o on_unmount ao container
     download_page_container.on_unmount = on_unmount
 
     return download_page_container

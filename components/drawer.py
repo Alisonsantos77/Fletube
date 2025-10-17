@@ -1,118 +1,182 @@
+import logging
+from typing import Optional
+
 import flet as ft
+
+logger = logging.getLogger(__name__)
+
+
+class DrawerManager:
+    """
+    Gerenciador de navegação e informações do drawer.
+    """
+
+    NAVIGATION_ROUTES = {
+        0: "/downloads",
+        1: "/historico",
+        2: "/configuracoes",
+    }
+
+    def __init__(self, page: ft.Page):
+        self.page = page
+        self.storage = page.session.get("app_storage")
+
+        if not self.storage:
+            logger.warning("app_storage não disponível, usando fallback")
+
+    def get_current_theme_icon(self) -> str:
+        """Retorna o ícone apropriado para o tema atual."""
+        if self.storage:
+            theme = self.storage.get_setting("theme_mode", "LIGHT")
+            return ft.Icons.DARK_MODE if theme == "DARK" else ft.Icons.LIGHT_MODE
+
+        return ft.Icons.LIGHT_MODE
+
+    def get_theme_label(self) -> str:
+        """Retorna o label apropriado para o tema atual."""
+        if self.storage:
+            theme = self.storage.get_setting("theme_mode", "LIGHT")
+            return f"Tema ({'Escuro' if theme == 'DARK' else 'Claro'})"
+
+        return "Tema (Claro)"
+
+    def toggle_theme(self) -> str:
+        """Alterna o tema e retorna o novo valor."""
+        if not self.storage:
+            logger.error("Storage não disponível para alternar tema")
+            return "LIGHT"
+
+        current = self.storage.get_setting("theme_mode", "LIGHT")
+        new_theme = "DARK" if current == "LIGHT" else "LIGHT"
+
+        self.page.theme_mode = (
+            ft.ThemeMode.DARK if new_theme == "DARK" else ft.ThemeMode.LIGHT
+        )
+        self.storage.set_setting("theme_mode", new_theme)
+        self.page.update()
+
+        logger.info(f"Tema alternado via drawer: {current} → {new_theme}")
+
+        return new_theme
+
+    def navigate_to(self, index: int) -> Optional[str]:
+        """
+        Navega para a rota correspondente ao índice.
+
+        Args:
+            index: Índice da opção selecionada
+
+        Returns:
+            str: Rota navegada ou None se for ação especial
+        """
+        if index == 3:
+            self.toggle_theme()
+            return None
+
+        route = self.NAVIGATION_ROUTES.get(index)
+
+        if route:
+            self.page.go(route)
+            logger.info(f"Navegação via drawer: {route}")
+            return route
+
+        logger.warning(f"Índice de navegação inválido: {index}")
+        return None
 
 
 def create_drawer(page: ft.Page):
-    theme = (page.client_storage.get("theme_mode") or "LIGHT").upper()
-    theme_icon = ft.Icons.DARK_MODE if theme == "DARK" else ft.Icons.LIGHT_MODE
+    """
+    Cria o drawer de navegação da aplicação.
 
-    drawer_header = ft.Container(
-        content=ft.Row(
-            controls=[
-                ft.Text(
-                    "Fletube",
-                    size=28,
-                    weight=ft.FontWeight.BOLD,
-                    color=ft.Colors.BLUE_600,
-                    expand=True,
-                    text_align=ft.TextAlign.LEFT,
-                ),
-                ft.Image(
-                    src="/images/logo.png",
-                    width=100,
-                    height=100,
-                    fit=ft.ImageFit.CONTAIN,
-                ),
-            ],
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-        ),
-        padding=ft.padding.symmetric(vertical=20, horizontal=15),
-    )
+    Args:
+        page: Instância da página Flet
+
+    Returns:
+        ft.NavigationDrawer: Drawer configurado
+    """
+
+    manager = DrawerManager(page)
+
+    def handle_drawer_change(e):
+        """Handler para mudanças no drawer."""
+        selected_index = e.control.selected_index
+        manager.navigate_to(selected_index)
 
     def open_info_dialog(e):
+        """Abre o diálogo de informações do desenvolvedor."""
+
+        def close_dialog(e):
+            info_dialog.open = False
+            page.update()
+
+        social_links = [
+            {
+                "icon": "images/contact/icons8-whatsapp-48.png",
+                "tooltip": "Abrir WhatsApp",
+                "url": "https://wa.link/oebrg2",
+            },
+            {
+                "icon": "images/contact/outlook-logo.png",
+                "tooltip": "Enviar Email",
+                "url": "mailto:Alisondev77@hotmail.com?subject=Feedback%20-%20Fletube&body=Olá, gostaria de fornecer feedback.",
+            },
+            {
+                "icon": "images/contact/icons8-linkedin-48.png",
+                "tooltip": "Acessar LinkedIn",
+                "url": "https://www.linkedin.com/in/alisonsantosdev",
+            },
+            {
+                "icon": "images/contact/icons8-github-64.png",
+                "tooltip": "Acessar GitHub",
+                "url": "https://github.com/Alisonsantos77",
+            },
+        ]
+
+        social_buttons = [
+            ft.IconButton(
+                content=ft.Image(
+                    src=link["icon"],
+                    width=40,
+                    height=40,
+                ),
+                tooltip=link["tooltip"],
+                url=link["url"],
+                style=ft.ButtonStyle(
+                    overlay_color=ft.Colors.TRANSPARENT,
+                ),
+            )
+            for link in social_links
+        ]
+
         info_dialog = ft.AlertDialog(
             title=ft.Row(
-                [
-                    ft.Text(
-                        "Fletube", size=24, weight=ft.FontWeight.BOLD
-                    ),
+                controls=[
+                    ft.Text("Fletube", size=24, weight=ft.FontWeight.BOLD),
                     ft.IconButton(
-                        icon=ft.icons.CLOSE,
+                        icon=ft.Icons.CLOSE,
                         tooltip="Fechar",
-                        on_click=lambda e: close_info_dialog(),
-                        icon_color=ft.Colors.RED,
+                        on_click=close_dialog,
                     ),
                 ],
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             ),
-            content=ft.Text(
-                "Entre em contato ou acesse minhas redes sociais:", size=16),
+            content=ft.Column(
+                controls=[
+                    ft.Text(
+                        "Entre em contato ou acesse minhas redes sociais:", size=16
+                    ),
+                    ft.Container(height=8),
+                    ft.Text(
+                        "Sistema de download do YouTube desenvolvido com Flet",
+                        size=14,
+                        italic=True,
+                    ),
+                ],
+                tight=True,
+            ),
             actions=[
                 ft.Row(
-                    controls=[
-                        ft.IconButton(
-                            content=ft.Image(
-                                src="images/contact/icons8-whatsapp-48.png",
-                                width=40,
-                                height=40,
-                            ),
-                            icon_color=ft.Colors.GREEN,
-                            tooltip="Abrir WhatsApp",
-                            url="https://wa.link/oebrg2",
-                            style=ft.ButtonStyle(
-                                overlay_color={
-                                    "": ft.Colors.TRANSPARENT,
-                                    "hovered": ft.Colors.GREEN,
-                                },
-                            ),
-                        ),
-                        ft.IconButton(
-                            content=ft.Image(
-                                src="images/contact/outlook-logo.png",
-                                width=40,
-                                height=40,
-                            ),
-                            icon_color=ft.Colors.PRIMARY,
-                            tooltip="Enviar Email",
-                            url="mailto:Alisondev77@hotmail.com?subject=Feedback%20-%20MultiTools&body=Olá, gostaria de fornecer feedback.",
-                            style=ft.ButtonStyle(
-                                overlay_color={
-                                    "": ft.Colors.TRANSPARENT,
-                                    "hovered": ft.Colors.BLUE,
-                                },
-                            ),
-                        ),
-                        ft.IconButton(
-                            content=ft.Image(
-                                src="images/contact/icons8-linkedin-48.png",
-                                width=40,
-                                height=40,
-                            ),
-                            tooltip="Acessar LinkedIn",
-                            url="https://www.linkedin.com/in/alisonsantosdev",
-                            style=ft.ButtonStyle(
-                                overlay_color={
-                                    "": ft.Colors.TRANSPARENT,
-                                    "hovered": ft.Colors.BLUE,
-                                },
-                            ),
-                        ),
-                        ft.IconButton(
-                            content=ft.Image(
-                                src="images/contact/icons8-github-64.png",
-                                width=40,
-                                height=40,
-                            ),
-                            icon_color=ft.Colors.PRIMARY,
-                            tooltip="Acessar GitHub",
-                            url="https://github.com/Alisonsantos77",
-                            style=ft.ButtonStyle(
-                                overlay_color={
-                                    "": ft.Colors.TRANSPARENT,
-                                    "hovered": ft.Colors.GREY,
-                                },
-                            ),
-                        ),
-                    ],
+                    controls=social_buttons,
                     alignment=ft.MainAxisAlignment.SPACE_AROUND,
                 ),
             ],
@@ -123,72 +187,96 @@ def create_drawer(page: ft.Page):
         info_dialog.open = True
         page.update()
 
-    def close_info_dialog():
-        for dialog in page.overlay:
-            if isinstance(dialog, ft.AlertDialog):
-                dialog.open = False
-        page.update()
+    drawer_header = ft.Container(
+        content=ft.Row(
+            controls=[
+                ft.Column(
+                    controls=[
+                        ft.Text(
+                            "Fletube",
+                            size=28,
+                            weight=ft.FontWeight.BOLD,
+                        ),
+                        ft.Text(
+                            "YouTube Downloader",
+                            size=12,
+                            italic=True,
+                        ),
+                    ],
+                    spacing=4,
+                    expand=True,
+                ),
+                ft.Image(
+                    src="/images/logo.png",
+                    width=80,
+                    height=80,
+                    fit=ft.ImageFit.CONTAIN,
+                ),
+            ],
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+        ),
+        padding=ft.padding.symmetric(vertical=20, horizontal=15),
+    )
+
+    navigation_items = [
+        ft.NavigationDrawerDestination(
+            label="Downloads",
+            icon=ft.Icons.DOWNLOAD_OUTLINED,
+            selected_icon=ft.Icons.DOWNLOAD,
+        ),
+        ft.NavigationDrawerDestination(
+            label="Histórico",
+            icon=ft.Icons.HISTORY_OUTLINED,
+            selected_icon=ft.Icons.HISTORY,
+        ),
+        ft.NavigationDrawerDestination(
+            label="Configurações",
+            icon=ft.Icons.SETTINGS_OUTLINED,
+            selected_icon=ft.Icons.SETTINGS,
+        ),
+        ft.NavigationDrawerDestination(
+            label=manager.get_theme_label(),
+            icon=manager.get_current_theme_icon(),
+            selected_icon=manager.get_current_theme_icon(),
+        ),
+    ]
+
+    footer = ft.Container(
+        content=ft.Column(
+            controls=[
+                ft.Divider(height=1),
+                ft.Row(
+                    controls=[
+                        ft.Text(
+                            "Desenvolvido por Alison Santos",
+                            size=14,
+                        ),
+                        ft.IconButton(
+                            icon=ft.Icons.INFO_OUTLINED,
+                            on_click=open_info_dialog,
+                            tooltip="Informações",
+                        ),
+                    ],
+                    alignment=ft.MainAxisAlignment.CENTER,
+                ),
+                ft.Text(
+                    "v2.0.0",
+                    size=12,
+                    italic=True,
+                    text_align=ft.TextAlign.CENTER,
+                ),
+            ],
+            spacing=4,
+        ),
+        padding=ft.padding.all(10),
+    )
 
     return ft.NavigationDrawer(
         controls=[
             drawer_header,
             ft.Container(expand=True),
-            ft.NavigationDrawerDestination(
-                label="Downloads",
-                icon=ft.Icons.DOWNLOAD_OUTLINED,
-                selected_icon=ft.FilledButton(
-                    text="Downloads",
-                    icon=ft.Icons.DOWNLOAD,
-                ),
-            ),
-            ft.NavigationDrawerDestination(
-                label="Histórico",
-                icon=ft.Icons.HISTORY_TOGGLE_OFF_OUTLINED,
-                selected_icon=ft.FilledButton(
-                    text="Histórico",
-                    icon=ft.Icons.HISTORY,
-                ),
-            ),
-            ft.NavigationDrawerDestination(
-                label="Configurações",
-                icon=ft.Icons.SETTINGS_OUTLINED,
-                selected_icon=ft.FilledButton(
-                    text="Configurações",
-                    icon=ft.Icons.SETTINGS,
-                ),
-            ),
-            ft.NavigationDrawerDestination(
-                label=f"Tema ({'Escuro' if theme == 'DARK' else 'Claro'})",
-                icon=theme_icon,
-                selected_icon=ft.Icon(
-                    theme_icon, color=ft.Colors.BLUE_600),
-            ),
-            ft.Divider(height=1),
-            ft.Container(
-                content=ft.Row(
-                    controls=[
-                        ft.Text("Desenvolvido por Alison Santos", size=14),
-                        ft.IconButton(
-                            icon=ft.Icons.INFO_OUTLINED,
-                            on_click=open_info_dialog,
-                            tooltip="Informações",
-                            icon_color=ft.Colors.GREY,
-                        ),
-                    ],
-                    alignment=ft.MainAxisAlignment.CENTER,
-                ),
-                padding=ft.padding.all(10),
-            ),
+            *navigation_items,
+            footer,
         ],
-        on_change=lambda e: handle_drawer_change(e, page),
+        on_change=handle_drawer_change,
     )
-
-
-def handle_drawer_change(e, page):
-    selected_index = e.control.selected_index
-    if selected_index == 0:
-        page.go("/downloads")
-    elif selected_index == 1:
-        page.go("/historico")
-    elif selected_index == 2:
-        page.go("/configuracoes")

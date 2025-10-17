@@ -1,14 +1,17 @@
 import logging
+
 import flet as ft
-from pages.download_page import DownloadPage
-from pages.history_page import HistoryPage
-from pages.settings_page import SettingsPage
-from pages.page_404 import PageNotFound
-from pages.login_page import LoginPage
-from pages.feedback_page import FeedbackPage
+
 from components.drawer import create_drawer
 from components.user_menu import create_user_menu
+from pages.download_page import DownloadPage
+from pages.feedback_page import FeedbackPage
+from pages.history_page import HistoryPage
+from pages.login_page import LoginPage
+from pages.page_404 import PageNotFound
+from pages.settings_page import SettingsPage
 from services.download_manager import DownloadManager
+
 # Configurando o logging nativo
 logging.basicConfig(
     filename="logs/app.log",  # Arquivo de logs
@@ -31,8 +34,7 @@ def setup_routes(page: ft.Page, download_manager: DownloadManager):
                 route="/downloads",
                 drawer=create_drawer(page),
                 appbar=ft.AppBar(
-                    bgcolor=ft.Colors.TRANSPARENT, actions=[
-                        create_user_menu(page)]
+                    bgcolor=ft.Colors.TRANSPARENT, actions=[create_user_menu(page)]
                 ),
                 controls=[DownloadPage(page, download_manager)],
             )
@@ -95,8 +97,10 @@ def setup_routes(page: ft.Page, download_manager: DownloadManager):
                 )
             )
         elif route == "/404":
-            logging.warning(f"Rota desconhecida: {
-                            route}, redirecionando para 404")
+            logging.warning(
+                f"Rota desconhecida: {
+                            route}, redirecionando para 404"
+            )
             page.views.append(
                 ft.View(
                     route="/404",

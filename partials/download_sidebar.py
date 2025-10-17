@@ -1,7 +1,5 @@
-import logging
 import flet as ft
-
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 class SidebarList(ft.Container):
@@ -50,30 +48,32 @@ class SidebarList(ft.Container):
         self.update_title_color()
 
     def update_title_color(self):
-        """Atualiza a cor do título baseado no tema armazenado no client storage."""
         if self.page:
             theme_mode = self.page.client_storage.get("theme_mode", "light")
-            self.title_control.color = ft.Colors.BLUE_700 if theme_mode == "light" else ft.Colors.WHITE
+            self.title_control.color = (
+                ft.Colors.BLUE_700 if theme_mode == "light" else ft.Colors.WHITE
+            )
             self.title_control.animate_opacity = 500
             self.title_control.update()
         else:
             logger.warning(
-                "self.page ainda não está inicializado. Adiando atualização da cor do título.")
+                "self.page ainda não está inicializado. Adiando atualização da cor do título."
+            )
 
     def on_unmount(self, e=None):
-        """Callback quando o SidebarList é desmontado."""
         self.mounted = False
         logger.info("SidebarList desmontado.")
 
-    def add_download_item(self, id, title, subtitle, thumbnail_url, file_path, download_manager=None):
-        """Adiciona um novo item de download à barra lateral."""
+    def add_download_item(
+        self, id, title, subtitle, thumbnail_url, file_path, download_manager=None
+    ):
         if not self.mounted:
-            print(
-                f"A SidebarList está tirando uma folga! Tentaremos adicionar o item '{title}' quando ela voltar ao trabalho.")
+            logger.warning(
+                f"A SidebarList está tirando uma folga! Tentaremos adicionar o item '{title}' quando ela voltar ao trabalho."
+            )
             return
 
-        status_text = ft.Text("🔥 Aguardando...", size=14,
-                              color=ft.Colors.BLUE_500)
+        status_text = ft.Text("🔥 Aguardando...", size=14, color=ft.Colors.BLUE_500)
 
         cancel_btn = ft.IconButton(
             icon=ft.Icons.CANCEL,
@@ -82,22 +82,40 @@ class SidebarList(ft.Container):
             tooltip="Cancelar download",
             visible=False,
             on_click=lambda e, did=id, dm=download_manager: self.cancel_download(
-                did, dm)
+                did, dm
+            ),
         )
 
         item = ft.ListTile(
             leading=ft.Container(
-                content=ft.Image(src=thumbnail_url, width=50,
-                                 height=50, fit=ft.ImageFit.COVER),
-                width=50, height=50, border_radius=ft.border_radius.all(5), animate_opacity=500, opacity=1,
+                content=ft.Image(
+                    src=thumbnail_url, width=50, height=50, fit=ft.ImageFit.COVER
+                ),
+                width=50,
+                height=50,
+                border_radius=ft.border_radius.all(5),
+                animate_opacity=500,
+                opacity=1,
             ),
-            title=ft.Text(value=title, size=18, weight=ft.FontWeight.BOLD,
-                          color=ft.Colors.LIGHT_BLUE_800, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
+            title=ft.Text(
+                value=title,
+                size=18,
+                weight=ft.FontWeight.BOLD,
+                color=ft.Colors.LIGHT_BLUE_800,
+                max_lines=1,
+                overflow=ft.TextOverflow.ELLIPSIS,
+            ),
             subtitle=ft.Text(
-                value=f"Formato: {subtitle}", size=14, color=ft.Colors.LIGHT_BLUE_600),
+                value=f"Formato: {subtitle}", size=14, color=ft.Colors.LIGHT_BLUE_600
+            ),
             trailing=ft.Row([status_text, cancel_btn], spacing=5, tight=True),
-            data={"id": id, "status": "pending", "file_path": file_path,
-                  "download_manager": download_manager, "cancel_btn": cancel_btn},
+            data={
+                "id": id,
+                "status": "pending",
+                "file_path": file_path,
+                "download_manager": download_manager,
+                "cancel_btn": cancel_btn,
+            },
             on_click=lambda e, id=id: self.on_item_click(id),
             animate_opacity=500,
             opacity=1,
@@ -110,14 +128,13 @@ class SidebarList(ft.Container):
         self.update_download_counts()
 
         logger.info(
-            f"Item de download adicionado: ID: {id}, título: {title}, formato: {subtitle}, caminho: {file_path}")
+            f"Item de download adicionado: ID: {id}, título: {title}, formato: {subtitle}, caminho: {file_path}"
+        )
 
     def on_item_click(self, id):
-        """Função de callback quando um item de download é clicado."""
         logger.info(f"Item clicado: ID {id}")
 
     def cancel_download(self, download_id, download_manager):
-        """Cancela um download em andamento."""
         if download_manager:
             download_manager.cancel_download(download_id)
             logger.info(f"Cancelamento solicitado para download {download_id}")
@@ -126,8 +143,9 @@ class SidebarList(ft.Container):
 
     def update_download_item(self, id, progress, status):
         if not self.mounted:
-            print(
-                f"A SidebarList está ausente! O item '{id}' será atualizado na próxima oportunidade.")
+            logger.warning(
+                f"A SidebarList está ausente! O item '{id}' será atualizado na próxima oportunidade."
+            )
             return
 
         item = self.items.get(id)
@@ -178,26 +196,28 @@ class SidebarList(ft.Container):
             logger.warning(f"Item '{id}' não encontrado na SidebarList.")
 
     def update_download_counts(self):
-        """Atualiza a contagem de downloads concluídos e com erro."""
-
         total = len(self.items)
 
-        errors = sum(1 for item in self.items.values()
-                     if item.data.get("status") == "error")
+        errors = sum(
+            1 for item in self.items.values() if item.data.get("status") == "error"
+        )
 
-        finished = sum(1 for item in self.items.values()
-                       if item.data.get("status") == "finished")
+        finished = sum(
+            1 for item in self.items.values() if item.data.get("status") == "finished"
+        )
 
-        self.title_control.value = f"✅ Concluídos: {finished} | ❌ Falhas: {errors} | 📊 Total: {total}"
+        self.title_control.value = (
+            f"✅ Concluídos: {finished} | ❌ Falhas: {errors} | 📊 Total: {total}"
+        )
         self.title_control.color = ft.Colors.BLUE_700
         self.title_control.animate_opacity = 500
         self.title_control.update()
 
     def refresh_downloads(self, downloads, download_manager=None):
-        """Atualiza toda a lista de downloads com base no estado atual."""
         if not self.mounted:
-            print(
-                "A SidebarList está tirando uma pausa. Vamos atualizar os downloads quando ela voltar!")
+            logger.warning(
+                "A SidebarList está tirando uma pausa. Vamos atualizar os downloads quando ela voltar!"
+            )
             return
 
         try:
@@ -211,7 +231,7 @@ class SidebarList(ft.Container):
                     subtitle=dados.get("format", "Formato Indisponível"),
                     thumbnail_url=dados.get("thumbnail", "/images/logo.png"),
                     file_path=dados.get("file_path", ""),
-                    download_manager=download_manager
+                    download_manager=download_manager,
                 )
 
             self.update_download_counts()

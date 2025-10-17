@@ -1,33 +1,24 @@
-import flet as ft
-from utils.client_storage_utils import (
-    recuperar_downloads_bem_sucedidos_client,
-    salvar_downloads_bem_sucedidos_client,
-    excluir_download_bem_sucedido_client,
-    excluir_todos_downloads_bem_sucedidos_client,
-)
-# from utils.session_storage_utils import (
-#     recuperar_downloads_bem_sucedidos_session,
-#     salvar_downloads_bem_sucedidos_session,
-#     excluir_download_bem_sucedido_session,
-#     excluir_todos_downloads_bem_sucedidos_session,
-# )
-
-import logging
 import os
 
-logger = logging.getLogger(__name__)
+import flet as ft
+from loguru import logger
 
 
 def HistoryPage(page: ft.Page):
-    download_history = recuperar_downloads_bem_sucedidos_client(page)
+    storage = page.session.get("app_storage")
     search_query = ft.Ref[ft.TextField]()
     sort_by = ft.Ref[ft.Dropdown]()
-    selected_items = set()  # Conjunto para armazenar IDs selecionados
-    last_deleted_items = []  # Lista para armazenar itens excluídos temporariamente
+    selected_items = set()
+    last_deleted_items = []
 
     dlg_modal_rf = ft.Ref[ft.AlertDialog]()
 
     counts_text = ft.Text("", size=16, weight=ft.FontWeight.W_600)
+
+    def get_download_history():
+        if storage:
+            return storage.list_downloads()
+        return []
 
     def render_download_item(item):
         item_id = item.get("id")
@@ -36,7 +27,6 @@ def HistoryPage(page: ft.Page):
             logger.warning(f"Item sem ID encontrado: {item}")
             return ft.Container()
 
-        # Função para alternar a seleção do item
         def toggle_selection(e):
             if item_id in selected_items:
                 selected_items.remove(item_id)
@@ -47,9 +37,13 @@ def HistoryPage(page: ft.Page):
 
         def delete_item(e, item_id=item_id, current_item=item):
             try:
-                excluir_download_bem_sucedido_client(page, item_id)
+                if storage:
+                    storage.delete_download(item_id)
                 last_deleted_items.append(current_item)
                 update_history_view()
+
+                from utils.ui_helpers import show_snackbar
+
                 snack_bar = ft.SnackBar(
                     content=ft.Text("Item excluído."),
                     bgcolor=ft.Colors.PRIMARY,
@@ -61,36 +55,28 @@ def HistoryPage(page: ft.Page):
                 page.update()
             except Exception as ex:
                 logger.error(f"Erro ao excluir o item: {ex}")
-                snack_bar = ft.SnackBar(
-                    content=ft.Text("Erro ao excluir o item."),
-                    bgcolor=ft.Colors.ERROR,
-                )
-                page.overlay.append(snack_bar)
-                snack_bar.open = True
-                page.update()
+                from utils.ui_helpers import show_error_snackbar
+
+                show_error_snackbar(page, "Erro ao excluir o item.")
 
         def undo_delete(e):
             for deleted_item in last_deleted_items:
-                salvar_downloads_bem_sucedidos_client(page, deleted_item)
+                if storage:
+                    storage.save_download(deleted_item.get("id"), deleted_item)
             last_deleted_items.clear()
             update_history_view()
-            snack_bar = ft.SnackBar(
-                content=ft.Text("Exclusão desfeita."),
-                bgcolor=ft.Colors.PRIMARY,
-            )
-            page.overlay.append(snack_bar)
-            snack_bar.open = True
-            page.update()
+
+            from utils.ui_helpers import show_snackbar
+
+            show_snackbar(page, "Exclusão desfeita.")
 
         checkbox = ft.Checkbox(
             value=item_id in selected_items,
             on_change=toggle_selection,
         )
 
-        # Definindo a referência do container para animações de hover
         container_ref = ft.Ref[ft.Container]()
 
-        # Novo estilo do card
         return ft.Container(
             ref=container_ref,
             content=ft.Column(
@@ -100,8 +86,7 @@ def HistoryPage(page: ft.Page):
                         width=235,
                         height=120,
                         fit=ft.ImageFit.COVER,
-                        border_radius=ft.border_radius.only(
-                            top_left=8, top_right=8),
+                        border_radius=ft.border_radius.only(top_left=8, top_right=8),
                         expand=True,
                     ),
                     ft.Container(
@@ -117,7 +102,6 @@ def HistoryPage(page: ft.Page):
                                 ft.Text(
                                     f"Formato: {item.get('format', 'Formato Indisponível')}",
                                     size=14,
-                                    color=ft.Colors.ON_SURFACE_VARIANT,
                                     weight=ft.FontWeight.W_600,
                                 ),
                                 ft.Row(
@@ -194,30 +178,28 @@ def HistoryPage(page: ft.Page):
         container.update()
 
     def delete_all(e):
-        download_history = recuperar_downloads_bem_sucedidos_client(page)
+        download_history = get_download_history()
         if not download_history:
-            snack_bar = ft.SnackBar(
-                content=ft.Text("Nenhum item para excluir."),
-                bgcolor=ft.Colors.ERROR,
-            )
-            page.overlay.append(snack_bar)
-            snack_bar.open = True
-            page.update()
+            from utils.ui_helpers import show_error_snackbar
+
+            show_error_snackbar(page, "Nenhum item para excluir.")
             return
 
         def confirm_delete(e):
-            excluir_todos_downloads_bem_sucedidos_client(page)
+            if storage:
+                storage.clear_downloads()
             last_deleted_items.extend(download_history)
             update_history_view()
             dlg_modal_rf.current.open = False
+
+            from utils.ui_helpers import show_snackbar
+
             snack_bar = ft.SnackBar(
                 content=ft.Text("Todos os itens foram excluídos."),
                 bgcolor=ft.Colors.PRIMARY,
                 action="Desfazer",
             )
-            snack_bar.on_action = lambda e: undo_delete_all(
-                e
-            )  # Define a função de "Desfazer"
+            snack_bar.on_action = lambda e: undo_delete_all(e)
             page.overlay.append(snack_bar)
             snack_bar.open = True
             page.update()
@@ -239,20 +221,17 @@ def HistoryPage(page: ft.Page):
 
     def undo_delete_all(e):
         for item in last_deleted_items:
-            salvar_downloads_bem_sucedidos_client(page, item)
+            if storage:
+                storage.save_download(item.get("id"), item)
         last_deleted_items.clear()
         update_history_view()
-        snack_bar = ft.SnackBar(
-            content=ft.Text("Exclusão desfeita."),
-            bgcolor=ft.Colors.PRIMARY,
-        )
-        page.overlay.append(snack_bar)
-        snack_bar.open = True
-        page.update()
+
+        from utils.ui_helpers import show_snackbar
+
+        show_snackbar(page, "Exclusão desfeita.")
 
     def update_history_view(e=None):
-        nonlocal download_history
-        download_history = recuperar_downloads_bem_sucedidos_client(page)
+        download_history = get_download_history()
         query = search_query.current.value.lower() if search_query.current.value else ""
         sort_criteria = sort_by.current.value
 
@@ -269,10 +248,11 @@ def HistoryPage(page: ft.Page):
             render_download_item(item) for item in filtered_history
         ]
 
-        # Atualizar as contagens
         total_downloads = len(download_history)
         filtered_downloads = len(filtered_history)
-        counts_text.value = f"Total de downloads: {total_downloads} | Exibindo: {filtered_downloads}"
+        counts_text.value = (
+            f"Total de downloads: {total_downloads} | Exibindo: {filtered_downloads}"
+        )
         counts_text.update()
 
         page.update()
@@ -293,7 +273,6 @@ def HistoryPage(page: ft.Page):
         on_click=update_history_view,
     )
 
-    # Campo de busca
     search_field = ft.TextField(
         hint_text="Pesquisar...",
         on_change=update_history_view,
@@ -312,7 +291,7 @@ def HistoryPage(page: ft.Page):
         ref=sort_by,
     )
 
-    # GridView para exibir histórico de downloads com animações
+    download_history = get_download_history()
     history_grid = ft.GridView(
         controls=[render_download_item(item) for item in download_history],
         max_extent=240,
@@ -321,7 +300,6 @@ def HistoryPage(page: ft.Page):
         expand=True,
     )
 
-    # AlertDialog para confirmações
     dlg_modal = ft.AlertDialog(
         title=ft.Text(""),
         content=ft.Text(""),
@@ -334,12 +312,10 @@ def HistoryPage(page: ft.Page):
     )
     page.overlay.append(dlg_modal)
 
-    # Layout da página de histórico
     return ft.Container(
         content=ft.Column(
             controls=[
-                ft.Text("Histórico de Downloads", size=28,
-                        weight=ft.FontWeight.BOLD),
+                ft.Text("Histórico de Downloads", size=28, weight=ft.FontWeight.BOLD),
                 counts_text,
                 ft.Row(
                     controls=[
@@ -353,12 +329,12 @@ def HistoryPage(page: ft.Page):
                 ft.Divider(height=2, color=ft.Colors.OUTLINE),
                 ft.Container(
                     content=history_grid,
-                    expand=True,  # Expande o Container que envolve o GridView
+                    expand=True,
                 ),
             ],
             spacing=20,
             alignment=ft.MainAxisAlignment.START,
-            expand=True,  # Expande o Column para preencher o espaço disponível
+            expand=True,
         ),
         padding=ft.padding.all(20),
     )
