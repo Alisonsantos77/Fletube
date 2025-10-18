@@ -12,13 +12,18 @@ class SidebarList(ft.Container):
             border_radius=ft.border_radius.all(10),
             content=ft.Column(
                 controls=[
-                    ft.Text(
-                        value=f"✅ Concluídos: {0} | ❌ Falhas: {0} | 📊 Total: {0} ",
-                        size=16,
-                        weight=ft.FontWeight.BOLD,
-                        color=ft.Colors.BLUE_GREY_900,
-                        text_align=ft.TextAlign.CENTER,
-                        key="downloads_title",
+                    ft.Row(
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        controls=[
+                            ft.Text(
+                                value=f"✅ Concluídos: {0} | ❌ Falhas: {0} | 📊 Total: {0} ",
+                                size=16,
+                                weight=ft.FontWeight.BOLD,
+                                color=ft.Colors.BLUE_GREY_900,
+                                text_align=ft.TextAlign.CENTER,
+                                key="downloads_title",
+                            ),
+                        ],
                     ),
                     ft.Divider(thickness=2, color=ft.Colors.BLUE_GREY_300),
                     ft.Container(
