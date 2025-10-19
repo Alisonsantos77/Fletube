@@ -11,37 +11,30 @@ FEEDBACK_RECIPIENT_EMAIL = os.getenv("FEEDBACK_RECIPIENT_EMAIL")
 
 def FeedbackPage(page: ft.Page):
     email_in_app = page.client_storage.get("email")
-
     current_step = [0]
     user_data = {}
 
     def next_step(e):
-        logger.info(
-            f"Tentando avançar para a próxima etapa a partir da etapa {current_step[0]}"
-        )
         if validate_current_step():
             current_step[0] += 1
             update_view()
-            logger.info(f"Avançou para a etapa {current_step[0]}")
-        else:
-            logger.warning("Validação falhou na etapa atual.")
 
     def previous_step(e):
-        logger.info(f"Tentando voltar da etapa {current_step[0]}")
         if current_step[0] > 0:
             current_step[0] -= 1
             update_view()
-            logger.info(f"Retrocedeu para a etapa {current_step[0]}")
-        else:
-            logger.info("Já está na primeira etapa; não é possível voltar.")
 
     def update_view():
         for index, view in enumerate(steps_views):
             view.visible = index == current_step[0]
+
+        progress_indicator.value = (current_step[0] + 1) / 5
+        progress_text.value = f"Etapa {current_step[0] + 1} de 5"
+
         if current_step[0] == 4:
             update_review()
+
         page.update()
-        logger.info(f"View atualizada para a etapa {current_step[0]}")
 
     def validate_current_step():
         if current_step[0] == 0:
@@ -50,46 +43,46 @@ def FeedbackPage(page: ft.Page):
             if not result:
                 email_input.error_text = str(result)
                 email_input.update()
-                logger.warning("E-mail inválido.")
                 return False
             else:
                 email_input.error_text = None
                 user_data["email"] = email
-                logger.info(f"E-mail coletado: {email}")
                 return True
+
         elif current_step[0] == 1:
             if selected_rating[0] == 0:
                 rating_error.value = "Por favor, selecione uma avaliação."
                 rating_error.update()
-                logger.warning("Nenhuma avaliação selecionada.")
                 return False
             else:
                 rating_error.value = ""
                 user_data["rating"] = selected_rating[0]
-                logger.info(f"Avaliação selecionada: {selected_rating[0]}")
                 return True
+
         elif current_step[0] == 2:
             user_data["category"] = category_radio_group.value
             user_data["subcategory"] = subcategory_radio_group.value
-            logger.info(f"Categoria selecionada: {user_data['category']}")
-            logger.info(f"Subcategoria selecionada: {user_data['subcategory']}")
             return True
+
         elif current_step[0] == 3:
             user_data["feedback_text"] = feedback_input.value.strip()
-            logger.info("Texto de feedback coletado.")
             return True
+
         return True
 
     def submit_feedback(e):
-        logger.info("Enviando feedback...")
+        submit_button.disabled = True
+        submit_button.text = "Enviando..."
+        submit_button.update()
+
         success = send_feedback_email(
             user_email=user_data["email"], user_message=user_data, page=page
         )
+
         if success:
             from utils.ui_helpers import show_success_snackbar
 
             show_success_snackbar(page, "Feedback enviado com sucesso!")
-            logger.info("Feedback enviado com sucesso.")
             current_step[0] = 0
             reset_feedback()
             update_view()
@@ -98,7 +91,9 @@ def FeedbackPage(page: ft.Page):
             from utils.ui_helpers import show_error_snackbar
 
             show_error_snackbar(page, "Erro ao enviar o feedback. Tente novamente.")
-            logger.error("Falha ao enviar o feedback.")
+            submit_button.disabled = False
+            submit_button.text = "Enviar Feedback"
+            submit_button.update()
 
     def update_review():
         email = user_data.get("email", "")
@@ -106,18 +101,74 @@ def FeedbackPage(page: ft.Page):
         category = user_data.get("category", "")
         subcategory = user_data.get("subcategory", "")
         feedback_text_value = user_data.get("feedback_text", "")
-        review_content = f"""
-        **Por favor, revise suas informações:**  
-        **Email:** {email}  
-        **Avaliação:** {rating} estrelas  
-        **Categoria:** {category}  
-        **Subcategoria:** {subcategory}  
-        **Feedback:**  
-        {feedback_text_value}
-        """
-        review_text.value = review_content
-        review_text.update()
-        logger.info("Conteúdo de revisão atualizado.")
+
+        review_items = [
+            {"label": "Email", "value": email, "icon": ft.Icons.EMAIL},
+            {
+                "label": "Avaliação",
+                "value": f"{'⭐' * rating} ({rating} estrelas)",
+                "icon": ft.Icons.STAR,
+            },
+            {"label": "Categoria", "value": category, "icon": ft.Icons.CATEGORY},
+            {"label": "Subcategoria", "value": subcategory, "icon": ft.Icons.LABEL},
+        ]
+
+        review_column.controls.clear()
+
+        for item in review_items:
+            review_column.controls.append(
+                ft.Container(
+                    content=ft.Row(
+                        [
+                            ft.Icon(item["icon"], size=20),
+                            ft.Column(
+                                [
+                                    ft.Text(
+                                        item["label"],
+                                        size=12,
+                                        weight=ft.FontWeight.W_500,
+                                    ),
+                                    ft.Text(item["value"], size=14),
+                                ],
+                                spacing=2,
+                                expand=True,
+                            ),
+                        ],
+                        spacing=12,
+                    ),
+                    padding=12,
+                    border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT),
+                    border_radius=8,
+                )
+            )
+
+        if feedback_text_value:
+            review_column.controls.append(
+                ft.Container(
+                    content=ft.Column(
+                        [
+                            ft.Row(
+                                [
+                                    ft.Icon(ft.Icons.MESSAGE, size=20),
+                                    ft.Text(
+                                        "Feedback adicional",
+                                        size=12,
+                                        weight=ft.FontWeight.W_500,
+                                    ),
+                                ],
+                                spacing=12,
+                            ),
+                            ft.Text(feedback_text_value, size=14),
+                        ],
+                        spacing=8,
+                    ),
+                    padding=12,
+                    border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT),
+                    border_radius=8,
+                )
+            )
+
+        review_column.update()
 
     def reset_feedback():
         email_input.value = ""
@@ -127,192 +178,618 @@ def FeedbackPage(page: ft.Page):
         feedback_input.value = ""
         rating_error.value = ""
         email_input.error_text = None
+        submit_button.disabled = False
+        submit_button.text = "Enviar Feedback"
         page.update()
-        logger.info("Formulário de feedback reiniciado.")
+
+    progress_indicator = ft.ProgressBar(
+        value=0.2,
+        width=500,
+        height=6,
+        bar_height=6,
+    )
+
+    progress_text = ft.Text(
+        "Etapa 1 de 5",
+        size=13,
+        weight=ft.FontWeight.W_500,
+        text_align=ft.TextAlign.CENTER,
+    )
 
     email_input = ft.TextField(
         label="Seu E-mail",
         hint_text="exemplo@dominio.com",
-        width=300,
+        width=400,
         keyboard_type=ft.KeyboardType.EMAIL,
         value=email_in_app if email_in_app else "",
+        prefix_icon=ft.Icons.EMAIL_OUTLINED,
+        border_radius=8,
+        text_size=15,
     )
 
-    step1 = ft.Column(
+    step1_left = ft.Column(
         [
             ft.Text(
-                "Etapa 1 de 5: Insira seu e-mail", size=20, weight=ft.FontWeight.BOLD
+                "Informe seu e-mail",
+                size=32,
+                weight=ft.FontWeight.BOLD,
             ),
-            email_input,
-            ft.Row(
-                [ft.ElevatedButton("Próximo", on_click=next_step)],
-                alignment=ft.MainAxisAlignment.CENTER,
+            ft.Container(height=16),
+            ft.Text(
+                "Usaremos seu e-mail para responder caso necessário",
+                size=16,
             ),
         ],
-        alignment=ft.MainAxisAlignment.CENTER,
+    )
+
+    step1_right = ft.Column(
+        [
+            ft.Container(
+                content=ft.Image(
+                    src="images/feedback/email_icon.png",
+                    width=140,
+                    height=140,
+                    fit=ft.ImageFit.CONTAIN,
+                ),
+                alignment=ft.alignment.center,
+            ),
+            ft.Container(height=20),
+            email_input,
+            ft.Container(height=24),
+            ft.ElevatedButton(
+                "Próximo",
+                icon=ft.Icons.ARROW_FORWARD,
+                on_click=next_step,
+                width=200,
+                height=48,
+            ),
+        ],
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+    )
+
+    step1 = ft.Row(
+        [
+            ft.Container(content=step1_left, expand=1),
+            ft.Container(content=step1_right, expand=1),
+        ],
+        spacing=60,
         visible=True,
     )
 
     selected_rating = [0]
     stars_ref = []
-
-    rating_error = ft.Text("", color=ft.Colors.RED)
+    rating_error = ft.Text("", size=14)
 
     def update_stars(selected_index):
         selected_rating[0] = selected_index + 1
         for i, star in enumerate(stars_ref):
             if i <= selected_index:
                 star.icon = ft.Icons.STAR
-                star.icon_color = ft.Colors.YELLOW
             else:
-                star.icon = ft.Icons.STAR_OUTLINE
-                star.icon_color = ft.Colors.GREY
+                star.icon = ft.Icons.STAR_BORDER
             star.update()
-        logger.info(f"Estrelas atualizadas: {selected_rating[0]} selecionadas.")
+        rating_error.value = ""
+        rating_error.update()
 
     def on_star_click(e):
         selected_index = int(e.control.data)
         update_stars(selected_index)
-        logger.info(f"Estrela clicada: {selected_index + 1}")
 
     for i in range(5):
         star = ft.IconButton(
-            icon=ft.Icons.STAR_OUTLINE,
-            icon_color=ft.Colors.GREY,
+            icon=ft.Icons.STAR_BORDER,
+            icon_size=44,
             data=i,
             on_click=on_star_click,
+            tooltip=f"{i + 1} estrela{'s' if i > 0 else ''}",
         )
         stars_ref.append(star)
 
-    step2 = ft.Column(
+    rating_descriptions = [
+        {"stars": 1, "text": "Muito insatisfeito", "icon": "😞"},
+        {"stars": 2, "text": "Insatisfeito", "icon": "😕"},
+        {"stars": 3, "text": "Neutro", "icon": "😐"},
+        {"stars": 4, "text": "Satisfeito", "icon": "😊"},
+        {"stars": 5, "text": "Muito satisfeito", "icon": "🤩"},
+    ]
+
+    step2_left = ft.Column(
         [
             ft.Text(
-                "Etapa 2 de 5: Avalie sua experiência",
-                size=20,
+                "Como foi sua experiência?",
+                size=32,
                 weight=ft.FontWeight.BOLD,
             ),
-            ft.Row(stars_ref, alignment=ft.MainAxisAlignment.CENTER),
+            ft.Container(height=16),
+            ft.Text(
+                "Sua avaliação nos ajuda a melhorar continuamente",
+                size=16,
+            ),
+            ft.Container(height=32),
+            ft.Column(
+                [
+                    ft.Container(
+                        content=ft.Row(
+                            [
+                                ft.Text(item["icon"], size=24),
+                                ft.Column(
+                                    [
+                                        ft.Text(
+                                            f"{item['stars']} estrela{'s' if item['stars'] > 1 else ''}",
+                                            size=14,
+                                            weight=ft.FontWeight.W_600,
+                                        ),
+                                        ft.Text(item["text"], size=13),
+                                    ],
+                                    spacing=2,
+                                ),
+                            ],
+                            spacing=12,
+                        ),
+                        padding=12,
+                        border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT),
+                        border_radius=8,
+                    )
+                    for item in rating_descriptions
+                ],
+                spacing=8,
+            ),
+        ],
+    )
+
+    step2_right = ft.Column(
+        [
+            ft.Container(
+                content=ft.Image(
+                    src="images/feedback/rating_icon.png",
+                    width=140,
+                    height=140,
+                    fit=ft.ImageFit.CONTAIN,
+                ),
+                alignment=ft.alignment.center,
+            ),
+            ft.Container(height=20),
+            ft.Row(
+                stars_ref,
+                alignment=ft.MainAxisAlignment.CENTER,
+                spacing=8,
+            ),
             rating_error,
+            ft.Container(height=32),
             ft.Row(
                 [
-                    ft.ElevatedButton("Voltar", on_click=previous_step),
-                    ft.ElevatedButton("Próximo", on_click=next_step),
+                    ft.OutlinedButton(
+                        "Voltar",
+                        icon=ft.Icons.ARROW_BACK,
+                        on_click=previous_step,
+                        width=150,
+                        height=48,
+                    ),
+                    ft.ElevatedButton(
+                        "Próximo",
+                        icon=ft.Icons.ARROW_FORWARD,
+                        on_click=next_step,
+                        width=150,
+                        height=48,
+                    ),
                 ],
+                spacing=16,
                 alignment=ft.MainAxisAlignment.CENTER,
             ),
         ],
-        alignment=ft.MainAxisAlignment.CENTER,
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+    )
+
+    step2 = ft.Row(
+        [
+            ft.Container(content=step2_left, expand=1),
+            ft.Container(content=step2_right, expand=1),
+        ],
+        spacing=60,
         visible=False,
     )
 
     category_radio_group = ft.RadioGroup(
-        content=ft.Row(
+        content=ft.Column(
             [
-                ft.Radio(value="Sugestão", label="Sugestão"),
-                ft.Radio(value="Problema", label="Problema"),
-                ft.Radio(value="Elogio", label="Elogio"),
+                ft.Radio(
+                    value="Sugestão",
+                    label="Sugestão - Tenho ideias para melhorar",
+                    label_style=ft.TextStyle(size=15),
+                ),
+                ft.Radio(
+                    value="Problema",
+                    label="Problema - Encontrei um erro",
+                    label_style=ft.TextStyle(size=15),
+                ),
+                ft.Radio(
+                    value="Elogio",
+                    label="Elogio - Gostei muito!",
+                    label_style=ft.TextStyle(size=15),
+                ),
             ],
-            alignment=ft.MainAxisAlignment.CENTER,
+            spacing=14,
         ),
         value="Sugestão",
     )
 
     subcategory_radio_group = ft.RadioGroup(
-        content=ft.Row(
+        content=ft.Column(
             [
-                ft.Radio(value="Funcional", label="Funcional"),
-                ft.Radio(value="Estético", label="Estético"),
-                ft.Radio(value="Usabilidade", label="Usabilidade"),
+                ft.Radio(
+                    value="Funcional",
+                    label="Funcional - Sobre funcionalidades",
+                    label_style=ft.TextStyle(size=15),
+                ),
+                ft.Radio(
+                    value="Estético",
+                    label="Estético - Sobre design e aparência",
+                    label_style=ft.TextStyle(size=15),
+                ),
+                ft.Radio(
+                    value="Usabilidade",
+                    label="Usabilidade - Sobre facilidade de uso",
+                    label_style=ft.TextStyle(size=15),
+                ),
             ],
-            alignment=ft.MainAxisAlignment.CENTER,
+            spacing=14,
         ),
         value="Funcional",
     )
 
-    step3 = ft.Column(
+    category_tips = [
+        {
+            "title": "Sugestão",
+            "description": "Compartilhe ideias de novos recursos ou melhorias",
+        },
+        {
+            "title": "Problema",
+            "description": "Relate bugs, erros ou comportamentos inesperados",
+        },
+        {
+            "title": "Elogio",
+            "description": "Conte o que você mais gostou no aplicativo",
+        },
+    ]
+
+    step3_left = ft.Column(
         [
             ft.Text(
-                "Etapa 3 de 5: Escolha a categoria", size=20, weight=ft.FontWeight.BOLD
+                "Sobre o que você quer falar?",
+                size=32,
+                weight=ft.FontWeight.BOLD,
             ),
-            ft.Text("Categoria do Feedback:"),
-            category_radio_group,
-            ft.Text("Subcategoria do Feedback:"),
-            subcategory_radio_group,
+            ft.Container(height=16),
+            ft.Text(
+                "Escolha a categoria e subcategoria que melhor descrevem seu feedback",
+                size=16,
+            ),
+            ft.Container(height=32),
+            ft.Column(
+                [
+                    ft.Container(
+                        content=ft.Column(
+                            [
+                                ft.Text(
+                                    tip["title"],
+                                    size=15,
+                                    weight=ft.FontWeight.W_600,
+                                ),
+                                ft.Text(
+                                    tip["description"],
+                                    size=13,
+                                ),
+                            ],
+                            spacing=4,
+                        ),
+                        padding=12,
+                        border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT),
+                        border_radius=8,
+                    )
+                    for tip in category_tips
+                ],
+                spacing=8,
+            ),
+        ],
+    )
+
+    step3_right = ft.Column(
+        [
+            ft.Container(
+                content=ft.Image(
+                    src="images/feedback/category1_icon.png",
+                    width=140,
+                    height=140,
+                    fit=ft.ImageFit.CONTAIN,
+                ),
+                alignment=ft.alignment.center,
+            ),
+            ft.Container(height=20),
+            ft.Text("Selecione uma categoria:", size=14, weight=ft.FontWeight.W_600),
+            ft.Container(height=8),
             ft.Row(
                 [
-                    ft.ElevatedButton("Voltar", on_click=previous_step),
-                    ft.ElevatedButton("Próximo", on_click=next_step),
+                    ft.Column(
+                        [
+                            ft.Text("Categoria Principal:", size=13, weight=ft.FontWeight.W_500),
+                            ft.Container(height=4),
+                            category_radio_group,
+                        ],
+                        spacing=4,
+                        expand=True,
+                    ),
+                    ft.Column(
+                        [
+                            ft.Text("Subcategoria:", size=13, weight=ft.FontWeight.W_500),
+                            ft.Container(height=4),
+                            subcategory_radio_group,
+                        ],
+                        spacing=4,
+                        expand=True,
+                    ),
                 ],
+                spacing=20,
+                alignment=ft.MainAxisAlignment.CENTER,
+            ),
+            ft.Container(height=32),
+            ft.Row(
+                [
+                    ft.OutlinedButton(
+                        "Voltar",
+                        icon=ft.Icons.ARROW_BACK,
+                        on_click=previous_step,
+                        width=150,
+                        height=48,
+                    ),
+                    ft.ElevatedButton(
+                        "Próximo",
+                        icon=ft.Icons.ARROW_FORWARD,
+                        on_click=next_step,
+                        width=150,
+                        height=48,
+                    ),
+                ],
+                spacing=16,
                 alignment=ft.MainAxisAlignment.CENTER,
             ),
         ],
-        alignment=ft.MainAxisAlignment.CENTER,
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+    )
+
+    step3 = ft.Row(
+        [
+            ft.Container(content=step3_left, expand=1),
+            ft.Container(content=step3_right, expand=1),
+        ],
+        spacing=60,
         visible=False,
     )
 
     feedback_input = ft.TextField(
-        label="Feedback (opcional)",
-        hint_text="Digite seu feedback aqui",
+        label="Seu feedback (opcional)",
+        hint_text="Compartilhe mais detalhes sobre sua experiência...",
         multiline=True,
-        min_lines=3,
-        max_lines=5,
-        width=400,
+        min_lines=8,
+        max_lines=12,
+        width=450,
+        border_radius=8,
     )
 
-    step4 = ft.Column(
+    feedback_tips = [
+        {
+            "icon": ft.Icons.LIGHTBULB_OUTLINE,
+            "text": "Seja específico sobre o que você gostou ou não gostou",
+        },
+        {
+            "icon": ft.Icons.DESCRIPTION_OUTLINED,
+            "text": "Descreva situações ou exemplos concretos",
+        },
+        {
+            "icon": ft.Icons.EMOJI_EMOTIONS_OUTLINED,
+            "text": "Não se preocupe com formatação, queremos ouvir você!",
+        },
+    ]
+
+    step4_left = ft.Column(
         [
             ft.Text(
-                "Etapa 4 de 5: Feedback adicional", size=20, weight=ft.FontWeight.BOLD
+                "Conte-nos mais",
+                size=32,
+                weight=ft.FontWeight.BOLD,
             ),
+            ft.Container(height=16),
+            ft.Text(
+                "Detalhe sua experiência. Este campo é opcional, mas quanto mais informações, melhor!",
+                size=16,
+            ),
+            ft.Container(height=32),
+            ft.Column(
+                [
+                    ft.Row(
+                        [
+                            ft.Icon(tip["icon"], size=20),
+                            ft.Text(tip["text"], size=14, expand=True),
+                        ],
+                        spacing=12,
+                    )
+                    for tip in feedback_tips
+                ],
+                spacing=16,
+            ),
+        ],
+    )
+
+    step4_right = ft.Column(
+        [
+            ft.Container(
+                content=ft.Image(
+                    src="images/feedback/feedback_icon.png",
+                    width=120,
+                    height=120,
+                    fit=ft.ImageFit.CONTAIN,
+                ),
+                alignment=ft.alignment.center,
+            ),
+            ft.Container(height=20),
             feedback_input,
+            ft.Container(height=24),
             ft.Row(
                 [
-                    ft.ElevatedButton("Voltar", on_click=previous_step),
-                    ft.ElevatedButton("Próximo", on_click=next_step),
+                    ft.OutlinedButton(
+                        "Voltar",
+                        icon=ft.Icons.ARROW_BACK,
+                        on_click=previous_step,
+                        width=150,
+                        height=48,
+                    ),
+                    ft.ElevatedButton(
+                        "Próximo",
+                        icon=ft.Icons.ARROW_FORWARD,
+                        on_click=next_step,
+                        width=150,
+                        height=48,
+                    ),
                 ],
+                spacing=16,
                 alignment=ft.MainAxisAlignment.CENTER,
             ),
         ],
-        alignment=ft.MainAxisAlignment.CENTER,
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+    )
+
+    step4 = ft.Row(
+        [
+            ft.Container(content=step4_left, expand=1),
+            ft.Container(content=step4_right, expand=1),
+        ],
+        spacing=60,
         visible=False,
     )
 
-    review_text = ft.Markdown("")
+    submit_button = ft.ElevatedButton(
+        "Enviar Feedback",
+        icon=ft.Icons.SEND,
+        on_click=submit_feedback,
+        width=200,
+        height=48,
+    )
 
-    submit_button = ft.ElevatedButton("Enviar Feedback", on_click=submit_feedback)
+    review_column = ft.Column([], spacing=12)
 
-    step5 = ft.Column(
+    step5_left = ft.Column(
         [
-            ft.Text("Etapa 5 de 5: Revisão", size=20, weight=ft.FontWeight.BOLD),
-            review_text,
+            ft.Text(
+                "Quase lá!",
+                size=32,
+                weight=ft.FontWeight.BOLD,
+            ),
+            ft.Container(height=16),
+            ft.Text(
+                "Revise suas informações antes de enviar. Obrigado por contribuir para melhorar o Fletube!",
+                size=16,
+            ),
+        ],
+    )
+
+    step5_right = ft.Column(
+        [
+            ft.Container(
+                content=ft.Image(
+                    src="images/feedback/review_icon.png",
+                    width=100,
+                    height=100,
+                    fit=ft.ImageFit.CONTAIN,
+                ),
+                alignment=ft.alignment.center,
+            ),
+            ft.Container(height=20),
+            ft.Container(
+                content=review_column,
+                width=450,
+            ),
+            ft.Container(height=24),
             ft.Row(
                 [
-                    ft.ElevatedButton("Voltar", on_click=previous_step),
+                    ft.OutlinedButton(
+                        "Voltar",
+                        icon=ft.Icons.ARROW_BACK,
+                        on_click=previous_step,
+                        width=150,
+                        height=48,
+                    ),
                     submit_button,
                 ],
+                spacing=16,
                 alignment=ft.MainAxisAlignment.CENTER,
             ),
         ],
-        alignment=ft.MainAxisAlignment.CENTER,
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+    )
+
+    step5 = ft.Row(
+        [
+            ft.Container(content=step5_left, expand=1),
+            ft.Container(content=step5_right, expand=1),
+        ],
+        spacing=60,
         visible=False,
     )
 
     steps_views = [step1, step2, step3, step4, step5]
 
-    container_steps = ft.Container(
+    header = ft.Row(
+        [
+            ft.Icon(ft.Icons.FEEDBACK_OUTLINED, size=32),
+            ft.Text(
+                "Envie seu Feedback",
+                size=32,
+                weight=ft.FontWeight.BOLD,
+            ),
+        ],
+        spacing=12,
+    )
+
+    progress_footer = ft.Container(
         content=ft.Column(
-            steps_views,
-            alignment=ft.MainAxisAlignment.CENTER,
+            [
+                progress_text,
+                progress_indicator,
+            ],
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            spacing=8,
         ),
-        animate=ft.animation.Animation(500, ft.AnimationCurve.EASE_IN_OUT),
+        alignment=ft.alignment.bottom_center,
+    )
+
+    main_content = ft.Column(
+        [
+            header,
+            ft.Container(height=40),
+            ft.Container(
+                content=ft.Column(steps_views, spacing=0),
+                expand=True,
+            ),
+        ],
+        expand=True,
+    )
+
+    layout = ft.Stack(
+        [
+            ft.Container(
+                content=main_content,
+                padding=ft.padding.symmetric(horizontal=80, vertical=40),
+                expand=True,
+            ),
+            ft.Container(
+                content=progress_footer,
+                bottom=40,
+                left=0,
+                right=0,
+            ),
+        ],
+        expand=True,
     )
 
     update_view()
 
-    return container_steps
+    return layout

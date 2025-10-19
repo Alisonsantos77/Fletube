@@ -7,11 +7,6 @@ logger = logging.getLogger(__name__)
 
 
 class AppearanceManager:
-    """
-    Gerenciador de aparência da aplicação.
-    Lida com temas, fontes e preferências visuais.
-    """
-
     AVAILABLE_FONTS = [
         "Padrão",
         "Kanit",
@@ -32,20 +27,12 @@ class AppearanceManager:
             raise RuntimeError("Storage não inicializado")
 
     def get_current_theme(self) -> str:
-        """Retorna o tema atual (LIGHT ou DARK)."""
         return self.storage.get_setting("theme_mode", "LIGHT")
 
     def is_dark_mode(self) -> bool:
-        """Verifica se está em modo escuro."""
         return self.get_current_theme() == "DARK"
 
     def toggle_theme(self) -> str:
-        """
-        Alterna entre modo claro e escuro.
-
-        Returns:
-            str: O novo tema aplicado
-        """
         current = self.get_current_theme()
         new_theme = "DARK" if current == "LIGHT" else "LIGHT"
 
@@ -53,6 +40,7 @@ class AppearanceManager:
             ft.ThemeMode.DARK if new_theme == "DARK" else ft.ThemeMode.LIGHT
         )
         self.storage.set_setting("theme_mode", new_theme)
+        self.page.client_storage.set("theme_mode", new_theme)
         self.page.update()
 
         logger.info(f"Tema alternado: {current} → {new_theme}")
@@ -60,24 +48,15 @@ class AppearanceManager:
         return new_theme
 
     def get_current_font(self) -> str:
-        """Retorna a fonte atual."""
         return self.storage.get_setting("font_family", "Padrão")
 
     def set_font(self, font_family: str) -> bool:
-        """
-        Define a fonte da aplicação.
-
-        Args:
-            font_family: Nome da fonte
-
-        Returns:
-            bool: True se aplicado com sucesso
-        """
         if font_family not in self.AVAILABLE_FONTS:
             logger.warning(f"Fonte inválida: {font_family}")
             return False
 
         self.storage.set_setting("font_family", font_family)
+        self.page.client_storage.set("font_family", font_family)
 
         self.page.theme = (
             ft.Theme(font_family=font_family) if font_family != "Padrão" else ft.Theme()
@@ -90,19 +69,13 @@ class AppearanceManager:
         return True
 
     def get_theme_icon(self) -> str:
-        """Retorna o ícone apropriado para o tema atual."""
         return ft.Icons.DARK_MODE if self.is_dark_mode() else ft.Icons.LIGHT_MODE
 
     def get_theme_description(self) -> str:
-        """Retorna descrição amigável do tema."""
         return "Modo Escuro" if self.is_dark_mode() else "Modo Claro"
 
 
 def AppearanceSettings(page: ft.Page):
-    """
-    Interface de configurações de aparência.
-    """
-
     try:
         manager = AppearanceManager(page)
     except RuntimeError as e:
@@ -119,7 +92,6 @@ def AppearanceSettings(page: ft.Page):
     preview_text_ref = ft.Ref[ft.Text]()
 
     def on_theme_toggle(e):
-        """Callback quando tema é alternado."""
         new_theme = manager.toggle_theme()
 
         is_dark = new_theme == "DARK"
@@ -141,7 +113,6 @@ def AppearanceSettings(page: ft.Page):
         page.update()
 
     def on_font_change(e):
-        """Callback quando fonte é alterada."""
         font = e.control.value
 
         if manager.set_font(font):

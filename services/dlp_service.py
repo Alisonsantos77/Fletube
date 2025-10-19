@@ -6,7 +6,8 @@ def download_with_ydl(ydl_opts, link):
     logger.info("Iniciando download para link: {}", link)
     try:
         with YoutubeDL(ydl_opts) as ydl:
-            ydl.download([link])
+            info = ydl.extract_info(link, download=True)
+            return info
     except Exception as e:
         logger.error("Ocorreu um erro durante o download para link {}: {}", link, e)
         raise e
@@ -51,7 +52,16 @@ def start_download(link, format, diretorio, progress_hook, is_playlist=False):
 
     try:
         with YoutubeDL(ydl_opts) as ydl:
-            ydl.download([link])
+            info = ydl.extract_info(link, download=True)
+
+            if info:
+                return {
+                    "title": info.get("title", "Título Indisponível"),
+                    "thumbnail": info.get("thumbnail", ""),
+                    "filepath": ydl.prepare_filename(info),
+                    "id": info.get("id", ""),
+                }
+            return {}
     except Exception as e:
         logger.error("Erro ao iniciar o download: {}", str(e))
         raise e

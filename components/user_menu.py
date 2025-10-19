@@ -8,21 +8,16 @@ logger = logging.getLogger(__name__)
 
 
 class UserMenuManager:
-    """
-    Gerenciador de informações e ações do menu de usuário.
-    """
 
     def __init__(self, page: ft.Page):
         self.page = page
         self.storage = page.session.get("app_storage")
 
     def get_username(self) -> str:
-        """Retorna o nome do usuário."""
         username = self.page.client_storage.get("username")
         return username if username else "Usuário"
 
     def get_user_initials(self) -> str:
-        """Retorna as iniciais do usuário."""
         username = self.get_username()
 
         if username == "Usuário":
@@ -35,33 +30,32 @@ class UserMenuManager:
         return username[0].upper()
 
     def get_remaining_days(self) -> int:
-        """Retorna os dias restantes da assinatura."""
         days = self.page.client_storage.get("dias_restantes")
         return days if days is not None else 0
 
     def get_subscription_type(self) -> str:
-        """Retorna o tipo de assinatura."""
         subscription = self.page.client_storage.get("subscription_type")
         return subscription if subscription else "Gratuito"
 
     def get_avatar_url(self) -> str:
-        """Retorna a URL do avatar do usuário."""
         username = self.get_username()
         return f"https://robohash.org/{username}.png"
 
     def logout(self):
-        """Realiza o logout do usuário."""
         try:
             logger.info(f"Logout iniciado para usuário: {self.get_username()}")
 
             self.page.client_storage.clear()
+
+            self.page.views.clear()
 
             snack_bar = ft.SnackBar(
                 content=ft.Row(
                     [
                         ft.Icon(ft.Icons.LOGOUT),
                         ft.Text("Logout realizado com sucesso!"),
-                    ]
+                    ],
+                    spacing=8,
                 ),
                 duration=2000,
             )
@@ -69,7 +63,16 @@ class UserMenuManager:
             snack_bar.open = True
             self.page.update()
 
-            self.page.go("/login")
+            import threading
+
+            def delayed_navigation():
+                try:
+                    self.page.go("/login")
+                except Exception as e:
+                    logger.error(f"Erro na navegação pós-logout: {e}")
+
+            timer = threading.Timer(0.3, delayed_navigation)
+            timer.start()
 
             logger.info("Logout concluído")
 
@@ -81,7 +84,8 @@ class UserMenuManager:
                     [
                         ft.Icon(ft.Icons.ERROR),
                         ft.Text("Erro ao realizar logout"),
-                    ]
+                    ],
+                    spacing=8,
                 ),
             )
             self.page.overlay.append(error_snack)
@@ -90,9 +94,6 @@ class UserMenuManager:
 
 
 class CountdownTimer(ft.Text):
-    """
-    Componente de countdown para exibir tempo restante da assinatura.
-    """
 
     def __init__(self, total_seconds: int):
         super().__init__()
@@ -100,16 +101,13 @@ class CountdownTimer(ft.Text):
         self.running = False
 
     def did_mount(self):
-        """Callback quando o componente é montado."""
         self.running = True
         self.page.run_task(self._update_countdown)
 
     def will_unmount(self):
-        """Callback quando o componente está prestes a ser desmontado."""
         self.running = False
 
     async def _update_countdown(self):
-        """Atualiza o countdown a cada segundo."""
         while self.total_seconds > 0 and self.running:
             days, remaining = divmod(self.total_seconds, 86400)
             hours, remaining = divmod(remaining, 3600)
@@ -135,20 +133,10 @@ class CountdownTimer(ft.Text):
 
 
 def create_user_menu(page: ft.Page):
-    """
-    Cria o menu de usuário com informações e ações.
-
-    Args:
-        page: Instância da página Flet
-
-    Returns:
-        ft.PopupMenuButton: Menu do usuário configurado
-    """
 
     manager = UserMenuManager(page)
 
     def handle_action(action: str):
-        """Handler para ações do menu."""
         if action == "logout":
             manager.logout()
         elif action == "settings":

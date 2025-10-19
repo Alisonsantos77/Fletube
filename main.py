@@ -38,6 +38,7 @@ class AppState:
 
             for key, value in defaults.items():
                 self.storage.set_setting(key, value)
+                self.page.client_storage.set(key, value)
 
             logger.info("Configurações padrão aplicadas com sucesso")
 
@@ -53,8 +54,6 @@ def verificar_status_usuario(page: ft.Page, max_retries: int = 3) -> bool:
 
             if not user_id:
                 logger.error("user_id não encontrado, redirecionando para login")
-                page.client_storage.clear()
-                page.go("/login")
                 return False
 
             cached_status = page.client_storage.get("user_status")
@@ -67,7 +66,6 @@ def verificar_status_usuario(page: ft.Page, max_retries: int = 3) -> bool:
 
                 if cached_status == "inativo":
                     page.client_storage.clear()
-                    page.go("/login")
                     return False
 
                 return True
@@ -81,7 +79,6 @@ def verificar_status_usuario(page: ft.Page, max_retries: int = 3) -> bool:
             if not is_active:
                 logger.warning(f"Usuário {user_id} está inativo")
                 page.client_storage.clear()
-                page.go("/login")
                 return False
 
             logger.info(f"Usuário {user_id} verificado com sucesso")
@@ -144,6 +141,7 @@ def setup_keyboard_shortcuts(page: ft.Page, app_state: AppState):
             ft.ThemeMode.DARK if new_theme == "DARK" else ft.ThemeMode.LIGHT
         )
         app_state.storage.set_setting("theme_mode", new_theme)
+        page.client_storage.set("theme_mode", new_theme)
         page.update()
 
         logger.info(f"Tema alternado para: {new_theme}")
@@ -174,7 +172,9 @@ def setup_lifecycle_handler(page: ft.Page):
         if e.data == "inactive":
             logger.info("Aplicação em segundo plano")
             page.session.set("app_in_background", True)
-            verificar_status_usuario(page)
+
+            if page.client_storage.get("autenticado"):
+                verificar_status_usuario(page)
 
         elif e.data == "active":
             logger.info("Aplicação voltou ao primeiro plano")
@@ -189,27 +189,40 @@ def initialize_app_services(page: ft.Page):
     logger.info("Tentativa de envio de feedbacks locais concluída")
 
 
+def clear_invalid_auth(page: ft.Page):
+    autenticado = page.client_storage.get("autenticado")
+    user_id = page.client_storage.get("user_id")
+
+    if autenticado and not user_id:
+        logger.warning("Sessão inválida detectada, limpando storage")
+        page.client_storage.clear()
+        return True
+
+    return False
+
+
 def main(page: ft.Page):
     logger.info("🚀 Iniciando Fletube")
 
     setup_window_properties(page)
 
+    clear_invalid_auth(page)
+
     if not AuthValidator.verify_auth(page):
         logger.warning("Usuário não autenticado, redirecionando para login")
 
-        snack_bar = ft.SnackBar(
-            content=ft.Text("Faça login para acessar esta página."),
-            bgcolor=ft.Colors.RED_400,
-        )
-        page.overlay.append(snack_bar)
-        snack_bar.open = True
-        page.update()
+        app_state = AppState(page)
+        page.session.set("app_storage", app_state.storage)
+        page.session.set("download_manager", app_state.download_manager)
+
+        apply_theme_and_fonts(page, app_state)
+        setup_routes(page, app_state.download_manager)
+
         page.go("/login")
         return
 
     app_state = AppState(page)
 
-    # acesso global
     page.session.set("app_storage", app_state.storage)
     page.session.set("download_manager", app_state.download_manager)
 

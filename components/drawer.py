@@ -7,14 +7,11 @@ logger = logging.getLogger(__name__)
 
 
 class DrawerManager:
-    """
-    Gerenciador de navegação e informações do drawer.
-    """
-
     NAVIGATION_ROUTES = {
         0: "/downloads",
         1: "/historico",
-        2: "/configuracoes",
+        2: "/pagamento",
+        3: "/configuracoes",
     }
 
     def __init__(self, page: ft.Page):
@@ -25,7 +22,6 @@ class DrawerManager:
             logger.warning("app_storage não disponível, usando fallback")
 
     def get_current_theme_icon(self) -> str:
-        """Retorna o ícone apropriado para o tema atual."""
         if self.storage:
             theme = self.storage.get_setting("theme_mode", "LIGHT")
             return ft.Icons.DARK_MODE if theme == "DARK" else ft.Icons.LIGHT_MODE
@@ -33,7 +29,6 @@ class DrawerManager:
         return ft.Icons.LIGHT_MODE
 
     def get_theme_label(self) -> str:
-        """Retorna o label apropriado para o tema atual."""
         if self.storage:
             theme = self.storage.get_setting("theme_mode", "LIGHT")
             return f"Tema ({'Escuro' if theme == 'DARK' else 'Claro'})"
@@ -41,7 +36,6 @@ class DrawerManager:
         return "Tema (Claro)"
 
     def toggle_theme(self) -> str:
-        """Alterna o tema e retorna o novo valor."""
         if not self.storage:
             logger.error("Storage não disponível para alternar tema")
             return "LIGHT"
@@ -53,6 +47,7 @@ class DrawerManager:
             ft.ThemeMode.DARK if new_theme == "DARK" else ft.ThemeMode.LIGHT
         )
         self.storage.set_setting("theme_mode", new_theme)
+        self.page.client_storage.set("theme_mode", new_theme)
         self.page.update()
 
         logger.info(f"Tema alternado via drawer: {current} → {new_theme}")
@@ -60,16 +55,7 @@ class DrawerManager:
         return new_theme
 
     def navigate_to(self, index: int) -> Optional[str]:
-        """
-        Navega para a rota correspondente ao índice.
-
-        Args:
-            index: Índice da opção selecionada
-
-        Returns:
-            str: Rota navegada ou None se for ação especial
-        """
-        if index == 3:
+        if index == 4:
             self.toggle_theme()
             return None
 
@@ -85,26 +71,13 @@ class DrawerManager:
 
 
 def create_drawer(page: ft.Page):
-    """
-    Cria o drawer de navegação da aplicação.
-
-    Args:
-        page: Instância da página Flet
-
-    Returns:
-        ft.NavigationDrawer: Drawer configurado
-    """
-
     manager = DrawerManager(page)
 
     def handle_drawer_change(e):
-        """Handler para mudanças no drawer."""
         selected_index = e.control.selected_index
         manager.navigate_to(selected_index)
 
     def open_info_dialog(e):
-        """Abre o diálogo de informações do desenvolvedor."""
-
         def close_dialog(e):
             info_dialog.open = False
             page.update()
@@ -230,6 +203,11 @@ def create_drawer(page: ft.Page):
             selected_icon=ft.Icons.HISTORY,
         ),
         ft.NavigationDrawerDestination(
+            label="Assinaturas",
+            icon=ft.Icons.SUBSCRIPTIONS_OUTLINED,
+            selected_icon=ft.Icons.SUBSCRIPTIONS,
+        ),
+        ft.NavigationDrawerDestination(
             label="Configurações",
             icon=ft.Icons.SETTINGS_OUTLINED,
             selected_icon=ft.Icons.SETTINGS,
@@ -259,11 +237,16 @@ def create_drawer(page: ft.Page):
                     ],
                     alignment=ft.MainAxisAlignment.CENTER,
                 ),
-                ft.Text(
-                    "v2.0.0",
-                    size=12,
-                    italic=True,
-                    text_align=ft.TextAlign.CENTER,
+                ft.Row(
+                    controls=[
+                        ft.Text(
+                            "Versão 1.3.0",
+                            size=12,
+                            italic=True,
+                            text_align=ft.TextAlign.CENTER,
+                        ),
+                    ],
+                    alignment=ft.MainAxisAlignment.CENTER,
                 ),
             ],
             spacing=4,

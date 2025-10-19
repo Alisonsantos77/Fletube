@@ -13,6 +13,7 @@ from utils.file_picker_utils import setup_file_picker
 from utils.ui_helpers import show_error_snackbar, show_snackbar
 from utils.validations import UIValidator
 from utils.video_info_extractor import VideoInfoExtractor
+import yt_dlp
 
 
 def download_content(
@@ -26,10 +27,18 @@ def download_content(
     barra_progress_video_rf = ft.Ref[ft.ProgressBar]()
     input_link_rf = ft.Ref[ft.TextField]()
     dlg_modal_rf = ft.Ref[ft.AlertDialog]()
+    dlg_playlist_rf = ft.Ref[ft.AlertDialog]()
     thumbnail_container_rf = ft.Ref[ft.Container]()
 
     dialog_open = {"value": False}
     last_clipboard_content = {"value": None}
+    pending_download = {
+        "link": None,
+        "format": None,
+        "directory": None,
+        "is_playlist": False,
+        "video_count": 0,
+    }
 
     barra_de_progresso = ft.ProgressBar(
         width=720,
@@ -40,12 +49,81 @@ def download_content(
         visible=False,
     )
 
-    def update_thumbnail(e):
-        video_url = input_link_rf.current.value.strip()
-        if not UIValidator.validate_input(page, video_url):
-            input_link_rf.current.value = None
-            input_link_rf.current.update()
+    def update_download_progress(progress: float, status: str = "downloading"):
+        if not barra_progress_video_rf.current:
             return
+
+        try:
+            if status == "downloading":
+                barra_progress_video_rf.current.value = progress
+                barra_progress_video_rf.current.visible = True
+                barra_progress_video_rf.current.color = ft.Colors.PRIMARY
+                status_text_rf.current.value = f"Baixando... {progress*100:.1f}%"
+                status_text_rf.current.color = ft.Colors.PRIMARY
+
+            elif status == "converting":
+                barra_progress_video_rf.current.value = None
+                barra_progress_video_rf.current.visible = True
+                barra_progress_video_rf.current.color = ft.Colors.ORANGE
+                status_text_rf.current.value = "Convertendo áudio/vídeo..."
+                status_text_rf.current.color = ft.Colors.ORANGE
+
+            elif status == "finished":
+                barra_progress_video_rf.current.value = 1.0
+                barra_progress_video_rf.current.visible = True
+                barra_progress_video_rf.current.color = ft.Colors.GREEN
+                status_text_rf.current.value = "✅ Download concluído!"
+                status_text_rf.current.color = ft.Colors.GREEN
+
+                async def hide_bar():
+                    await asyncio.sleep(3)
+                    if barra_progress_video_rf.current:
+                        barra_progress_video_rf.current.visible = False
+                        barra_progress_video_rf.current.update()
+                        status_text_rf.current.value = "Pronto para novo download"
+                        status_text_rf.current.color = ft.Colors.ON_SURFACE_VARIANT
+                        status_text_rf.current.update()
+
+                page.run_task(hide_bar)
+
+            elif status == "error":
+                barra_progress_video_rf.current.value = 1.0
+                barra_progress_video_rf.current.visible = True
+                barra_progress_video_rf.current.color = ft.Colors.ERROR
+                status_text_rf.current.value = "❌ Erro no download"
+                status_text_rf.current.color = ft.Colors.ERROR
+
+            barra_progress_video_rf.current.update()
+            status_text_rf.current.update()
+
+        except Exception as e:
+            logger.error(f"Erro ao atualizar progress bar: {e}")
+
+    def check_if_playlist(url: str) -> tuple[bool, int]:
+        try:
+            ydl_opts = {
+                "quiet": True,
+                "extract_flat": True,
+                "skip_download": True,
+                "no_warnings": True,
+            }
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=False)
+
+                if info and "entries" in info:
+                    entries = list(info.get("entries", []))
+                    entries_count = len(entries)
+
+                    if entries_count > 1:
+                        logger.info(f"📋 Playlist detectada: {entries_count} vídeos")
+                        return True, entries_count
+
+        except Exception as e:
+            logger.error(f"Erro ao verificar playlist: {e}")
+
+        return False, 1
+
+    async def update_thumbnail_animated(video_url: str):
         try:
             status_text_rf.current.value = "Extraindo informações..."
             status_text_rf.current.color = ft.Colors.PRIMARY
@@ -56,15 +134,19 @@ def download_content(
 
             thumb_url = VideoInfoExtractor.extract_thumbnail(video_url)
 
-            thumbnail_container_rf.current.scale = 0.98
-            thumbnail_container_rf.current.opacity = 0.5
+            thumbnail_container_rf.current.scale = 0.95
+            thumbnail_container_rf.current.opacity = 0.3
             thumbnail_container_rf.current.update()
+
+            await asyncio.sleep(0.25)
 
             img_downloader_rf.current.src = thumb_url
             img_downloader_rf.current.update()
 
-            thumbnail_container_rf.current.scale = 1
-            thumbnail_container_rf.current.opacity = 1
+            await asyncio.sleep(0.05)
+
+            thumbnail_container_rf.current.scale = 1.0
+            thumbnail_container_rf.current.opacity = 1.0
             thumbnail_container_rf.current.update()
 
             status_text_rf.current.value = "Pronto para download"
@@ -76,6 +158,10 @@ def download_content(
             barra_progress_video_rf.current.update()
 
         except ValueError as ve:
+            thumbnail_container_rf.current.scale = 1.0
+            thumbnail_container_rf.current.opacity = 1.0
+            thumbnail_container_rf.current.update()
+
             status_text_rf.current.value = str(ve)
             status_text_rf.current.color = ft.Colors.ERROR
             status_text_rf.current.update()
@@ -86,9 +172,21 @@ def download_content(
 
             show_error_snackbar(page, str(ve))
 
+    def update_thumbnail(e):
+        video_url = input_link_rf.current.value.strip()
+        if not UIValidator.validate_input(page, video_url):
+            input_link_rf.current.value = None
+            input_link_rf.current.update()
+            return
+
+        page.run_task(update_thumbnail_animated, video_url)
+
     def on_directory_selected(directory_path):
         if directory_path:
-            page.client_storage.set("download_directory", directory_path)
+            storage = page.session.get("app_storage")
+            if storage:
+                storage.set_setting("download_directory", directory_path)
+
             status_text_rf.current.value = f"Diretório: {directory_path}"
             status_text_rf.current.color = ft.Colors.PRIMARY
             status_text_rf.current.update()
@@ -97,26 +195,70 @@ def download_content(
     def iniciar_download_apos_selecionar_diretorio(diretorio):
         link = input_link_rf.current.value.strip()
         format_dropdown = drop_format_rf.current.value
-        page.client_storage.set("selected_format", format_dropdown)
+
         if link and format_dropdown:
-            status_text_rf.current.value = "Iniciando download..."
-            status_text_rf.current.color = ft.Colors.PRIMARY
-            status_text_rf.current.update()
-            show_snackbar(page, "Download iniciado...")
+            is_playlist, video_count = check_if_playlist(link)
 
-            barra_progress_video_rf.current.value = 0.0
-            barra_progress_video_rf.current.visible = True
-            barra_progress_video_rf.current.update()
+            if is_playlist:
+                pending_download["link"] = link
+                pending_download["format"] = format_dropdown
+                pending_download["directory"] = diretorio
+                pending_download["is_playlist"] = True
+                pending_download["video_count"] = video_count
 
-            download_manager.iniciar_download(
-                link, format_dropdown, diretorio, sidebar, page
-            )
-
+                dialog_open["value"] = True
+                dlg_playlist_rf.current.title.value = "🎵 Playlist Detectada"
+                dlg_playlist_rf.current.content.value = (
+                    f"Esta URL contém uma playlist com {video_count} vídeos.\n\n"
+                    "Deseja baixar toda a playlist ou apenas o vídeo atual?"
+                )
+                dlg_playlist_rf.current.open = True
+                page.update()
+            else:
+                executar_download(link, format_dropdown, diretorio, False)
         else:
             status_text_rf.current.value = "Insira um link e escolha um formato"
             status_text_rf.current.color = ft.Colors.ERROR
             status_text_rf.current.update()
             show_error_snackbar(page, "Por favor, insira um link e escolha um formato.")
+
+    def executar_download(link, formato, diretorio, is_playlist):
+        status_text_rf.current.value = "Iniciando download..."
+        status_text_rf.current.color = ft.Colors.PRIMARY
+        status_text_rf.current.update()
+        show_snackbar(page, "Download iniciado...")
+
+        barra_progress_video_rf.current.value = 0.0
+        barra_progress_video_rf.current.visible = True
+        barra_progress_video_rf.current.update()
+
+        download_manager.iniciar_download(
+            link=link,
+            formato=formato,
+            diretorio=diretorio,
+            sidebar=sidebar,
+            page=page,
+            is_playlist=is_playlist,
+            progress_callback=update_download_progress,
+        )
+
+    def handle_playlist_response(download_playlist: bool):
+        dialog_open["value"] = False
+        dlg_playlist_rf.current.open = False
+        page.update()
+
+        if pending_download["link"]:
+            executar_download(
+                pending_download["link"],
+                pending_download["format"],
+                pending_download["directory"],
+                download_playlist,
+            )
+            pending_download["link"] = None
+            pending_download["format"] = None
+            pending_download["directory"] = None
+            pending_download["is_playlist"] = False
+            pending_download["video_count"] = 0
 
     def renderizar_lista_downloads_salvos(page, sidebar):
         storage = page.session.get("app_storage")
@@ -161,7 +303,11 @@ def download_content(
                 status_text_rf.current.update()
 
     def start_download_click(e):
-        diretorio = page.client_storage.get("download_directory")
+        storage = page.session.get("app_storage")
+        diretorio = None
+        if storage:
+            diretorio = storage.get_setting("download_directory")
+
         if diretorio and diretorio != "Nenhum diretório selecionado!":
             iniciar_download_apos_selecionar_diretorio(diretorio)
         else:
@@ -191,8 +337,29 @@ def download_content(
     )
     page.overlay.append(dlg_modal)
 
+    dlg_playlist = ft.AlertDialog(
+        title=ft.Text(""),
+        content=ft.Text(""),
+        actions=[
+            ft.TextButton(
+                "Baixar Playlist Completa",
+                on_click=lambda e: handle_playlist_response(True),
+            ),
+            ft.TextButton(
+                "Apenas Este Vídeo", on_click=lambda e: handle_playlist_response(False)
+            ),
+        ],
+        actions_alignment=ft.MainAxisAlignment.END,
+        ref=dlg_playlist_rf,
+    )
+    page.overlay.append(dlg_playlist)
+
     def check_clipboard_for_youtube_link(e):
-        clipboard_monitoring = page.client_storage.get("clipboard_monitoring")
+        storage = page.session.get("app_storage")
+        clipboard_monitoring = False
+        if storage:
+            clipboard_monitoring = storage.get_setting("clipboard_monitoring", True)
+
         if not clipboard_monitoring:
             return
 
@@ -261,8 +428,8 @@ def download_content(
         width=770,
         height=433,
         padding=0,
-        animate_opacity=300,
-        animate_scale=ft.Animation(300, ft.AnimationCurve.EASE_OUT),
+        animate_opacity=ft.Animation(250, ft.AnimationCurve.EASE_IN_OUT),
+        animate_scale=ft.Animation(250, ft.AnimationCurve.EASE_OUT),
         opacity=1,
         scale=1,
         ref=thumbnail_container_rf,
@@ -294,11 +461,10 @@ def download_content(
         filled=True,
     )
 
-    format_value = (
-        page.client_storage.get("selected_format")
-        or page.client_storage.get("default_format")
-        or "mp3"
-    )
+    storage = page.session.get("app_storage")
+    format_value = "mp3"
+    if storage:
+        format_value = storage.get_setting("default_format", "mp3")
 
     format_dropdown = ft.Dropdown(
         ref=drop_format_rf,
@@ -406,7 +572,11 @@ def download_content(
         start_clipboard_task()
 
     def start_clipboard_task():
-        clipboard_monitoring = page.client_storage.get("clipboard_monitoring")
+        storage = page.session.get("app_storage")
+        clipboard_monitoring = False
+        if storage:
+            clipboard_monitoring = storage.get_setting("clipboard_monitoring", True)
+
         if clipboard_monitoring:
             page.run_async_task(partial(clipboard_reminder, page, status_text_rf))
 

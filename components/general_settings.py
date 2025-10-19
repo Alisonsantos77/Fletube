@@ -7,10 +7,6 @@ logger = logging.getLogger(__name__)
 
 
 class GeneralSettingsManager:
-    """
-    Gerenciador de configurações gerais da aplicação.
-    """
-
     def __init__(self, page: ft.Page):
         self.page = page
         self.storage = page.session.get("app_storage")
@@ -20,12 +16,6 @@ class GeneralSettingsManager:
             raise RuntimeError("Storage não inicializado")
 
     def reset_all_settings(self) -> bool:
-        """
-        Reseta todas as configurações para valores padrão.
-
-        Returns:
-            bool: True se resetado com sucesso
-        """
         try:
             storage_info = self.storage.get_storage_info()
 
@@ -36,8 +26,8 @@ class GeneralSettingsManager:
             defaults = {
                 "theme_mode": "LIGHT",
                 "font_family": "Padrão",
-                "clipboard_monitoring": False,
-                "default_format": "mp4",
+                "clipboard_monitoring": True,
+                "default_format": "mp3",
                 "initialized": True,
             }
 
@@ -45,6 +35,10 @@ class GeneralSettingsManager:
                 self.storage.set_setting(key, value)
 
             self.page.client_storage.clear()
+
+            for key, value in defaults.items():
+                self.page.client_storage.set(key, value)
+
             self.page.client_storage.set("config_reset", True)
 
             logger.info("Configurações resetadas com sucesso")
@@ -56,7 +50,6 @@ class GeneralSettingsManager:
             return False
 
     def get_storage_statistics(self) -> dict:
-        """Retorna estatísticas do armazenamento."""
         try:
             return self.storage.get_storage_info()
         except Exception as e:
@@ -68,7 +61,6 @@ class GeneralSettingsManager:
             }
 
     def export_settings(self) -> Optional[dict]:
-        """Exporta todas as configurações para backup."""
         try:
             return self.storage.export_all()
         except Exception as e:
@@ -77,10 +69,6 @@ class GeneralSettingsManager:
 
 
 def GeneralSettings(page: ft.Page):
-    """
-    Interface de configurações gerais da aplicação.
-    """
-
     try:
         manager = GeneralSettingsManager(page)
     except RuntimeError as e:
@@ -90,8 +78,6 @@ def GeneralSettings(page: ft.Page):
         )
 
     def on_reset_click(e):
-        """Callback quando botão de reset é clicado."""
-
         def confirm_reset(e):
             dialog.open = False
             page.update()
@@ -164,7 +150,6 @@ def GeneralSettings(page: ft.Page):
         page.update()
 
     def on_feedback_click(e):
-        """Navega para página de feedback."""
         page.go("/feedback")
 
     stats = manager.get_storage_statistics()

@@ -140,10 +140,16 @@ def send_feedback_email(user_email: str, user_message: dict, page: ft.Page) -> b
         return False
 
     try:
+        if not all([SMTP_SERVER, EMAIL_USER, EMAIL_PASSWORD, FEEDBACK_RECIPIENT_EMAIL]):
+            logger.warning("Configurações SMTP incompletas. Email não enviado.")
+            logger.info("Feedback salvo no banco, mas email não foi enviado.")
+            return True
+
         msg = MIMEMultipart("alternative")
         msg["From"] = EMAIL_USER
         msg["To"] = FEEDBACK_RECIPIENT_EMAIL
         msg["Subject"] = "Feedback - Fletube"
+
         feedback_text = user_message.get("feedback_text", "")
         markdown_body = (
             f"## Feedback - Fletube\n\n"
@@ -155,17 +161,45 @@ def send_feedback_email(user_email: str, user_message: dict, page: ft.Page) -> b
         )
         msg.attach(MIMEText(markdown_body, "plain"))
 
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+        server = None
+        try:
+            server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=10)
+            server.ehlo()  # Identifica-se ao servidor
+
+            # Inicia TLS
             server.starttls()
+            server.ehlo()  # Identifica-se novamente após TLS
+
+            # Faz login
             server.login(EMAIL_USER, EMAIL_PASSWORD)
+
+            # Envia o email
             server.sendmail(EMAIL_USER, FEEDBACK_RECIPIENT_EMAIL, msg.as_string())
 
-        logger.info("Feedback enviado por e-mail com sucesso.")
+            logger.info("✅ Feedback enviado por e-mail com sucesso.")
+            return True
+
+        finally:
+            if server:
+                try:
+                    server.quit()
+                except:
+                    server.close()
+
+    except smtplib.SMTPAuthenticationError as e:
+        logger.error(f"❌ Erro de autenticação SMTP: {e}")
+        logger.info("Feedback salvo no banco, mas email não foi enviado.")
+        return True
+
+    except smtplib.SMTPException as e:
+        logger.error(f"❌ Erro SMTP ao enviar feedback: {e}")
+        logger.info("Feedback salvo no banco, mas email não foi enviado.")
         return True
 
     except Exception as e:
-        logger.error(f"Erro ao enviar feedback por e-mail: {e}")
-        return False
+        logger.error(f"❌ Erro inesperado ao enviar feedback por e-mail: {e}")
+        logger.info("Feedback salvo no banco, mas email não foi enviado.")
+        return True
 
 
 def clean_feedback_backup() -> None:

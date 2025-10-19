@@ -409,7 +409,6 @@ def DownloadSettings(page: ft.Page):
         ),
         col={"sm": 12, "md": 6},
         padding=20,
-        border_radius=12,
     )
 
     return ft.ResponsiveRow(
