@@ -41,6 +41,24 @@ class UserMenuManager:
         username = self.get_username()
         return f"https://robohash.org/{username}.png"
 
+    def get_subscription_icon(self) -> str:
+        subscription = self.get_subscription_type()
+        if subscription == "Premium":
+            return ft.Icons.STAR
+        elif subscription == "Pro":
+            return ft.Icons.VERIFIED
+        else:
+            return ft.Icons.INFO_OUTLINED
+
+    def get_subscription_color(self) -> str:
+        subscription = self.get_subscription_type()
+        if subscription == "Premium":
+            return ft.Colors.ORANGE_400
+        elif subscription == "Pro":
+            return ft.Colors.PURPLE_400
+        else:
+            return ft.Colors.BLUE_400
+
     def logout(self):
         try:
             logger.info(f"Logout iniciado para usuário: {self.get_username()}")
@@ -114,6 +132,8 @@ class CountdownTimer(ft.Text):
             minutes, seconds = divmod(remaining, 60)
 
             self.value = f"{days}d {hours}h {minutes}m {seconds}s"
+            self.weight = ft.FontWeight.W_600
+            self.color = ft.Colors.ORANGE_400
 
             try:
                 self.update()
@@ -126,6 +146,7 @@ class CountdownTimer(ft.Text):
 
         if self.total_seconds <= 0 and self.running:
             self.value = "Assinatura expirada"
+            self.color = ft.Colors.ERROR
             try:
                 self.update()
             except Exception:
@@ -141,6 +162,8 @@ def create_user_menu(page: ft.Page):
             manager.logout()
         elif action == "settings":
             page.go("/configuracoes")
+        elif action == "payment":
+            page.go("/pagamento")
         elif action == "profile":
             logger.info("Perfil selecionado (funcionalidade futura)")
 
@@ -149,6 +172,8 @@ def create_user_menu(page: ft.Page):
     remaining_days = manager.get_remaining_days()
     subscription_type = manager.get_subscription_type()
     avatar_url = manager.get_avatar_url()
+    sub_icon = manager.get_subscription_icon()
+    sub_color = manager.get_subscription_color()
 
     remaining_seconds = remaining_days * 86400
 
@@ -160,7 +185,18 @@ def create_user_menu(page: ft.Page):
                         ft.Icons.PERSON,
                         size=20,
                     ),
-                    ft.Text(username, size=14, weight=ft.FontWeight.W_500),
+                    ft.Column(
+                        [
+                            ft.Text(username, size=14, weight=ft.FontWeight.W_600),
+                            ft.Text(
+                                "Perfil",
+                                size=11,
+                                italic=True,
+                                color=ft.Colors.ON_SURFACE_VARIANT,
+                            ),
+                        ],
+                        spacing=2,
+                    ),
                 ],
                 spacing=12,
             ),
@@ -170,18 +206,20 @@ def create_user_menu(page: ft.Page):
         ft.PopupMenuItem(
             content=ft.Row(
                 controls=[
-                    ft.Icon(ft.Icons.CARD_MEMBERSHIP, size=20),
+                    ft.Icon(sub_icon, size=20, color=sub_color),
                     ft.Column(
                         controls=[
                             ft.Text(
                                 subscription_type,
                                 size=14,
-                                weight=ft.FontWeight.W_500,
+                                weight=ft.FontWeight.W_600,
+                                color=sub_color,
                             ),
                             ft.Text(
                                 "Tipo de Assinatura",
                                 size=11,
                                 italic=True,
+                                color=ft.Colors.ON_SURFACE_VARIANT,
                             ),
                         ],
                         spacing=2,
@@ -193,18 +231,24 @@ def create_user_menu(page: ft.Page):
         ft.PopupMenuItem(
             content=ft.Row(
                 controls=[
-                    ft.Icon(ft.Icons.TIMER, size=20),
+                    ft.Icon(ft.Icons.TIMER, size=20, color=ft.Colors.ORANGE),
                     ft.Column(
                         controls=[
                             (
                                 CountdownTimer(remaining_seconds)
                                 if remaining_days > 0
-                                else ft.Text("Expirado", size=14)
+                                else ft.Text(
+                                    "Expirado",
+                                    size=14,
+                                    weight=ft.FontWeight.W_600,
+                                    color=ft.Colors.ERROR,
+                                )
                             ),
                             ft.Text(
                                 "Tempo Restante",
                                 size=11,
                                 italic=True,
+                                color=ft.Colors.ON_SURFACE_VARIANT,
                             ),
                         ],
                         spacing=2,
@@ -214,6 +258,16 @@ def create_user_menu(page: ft.Page):
             ),
         ),
         ft.Divider(height=1),
+        ft.PopupMenuItem(
+            content=ft.Row(
+                controls=[
+                    ft.Icon(ft.Icons.CREDIT_CARD, size=20, color=ft.Colors.GREEN),
+                    ft.Text("Assinatura", size=14, weight=ft.FontWeight.W_600),
+                ],
+                spacing=12,
+            ),
+            on_click=lambda e: handle_action("payment"),
+        ),
         ft.PopupMenuItem(
             content=ft.Row(
                 controls=[
@@ -227,8 +281,8 @@ def create_user_menu(page: ft.Page):
         ft.PopupMenuItem(
             content=ft.Row(
                 controls=[
-                    ft.Icon(ft.Icons.LOGOUT, size=20),
-                    ft.Text("Sair", size=14),
+                    ft.Icon(ft.Icons.LOGOUT, size=20, color=ft.Colors.ERROR),
+                    ft.Text("Sair", size=14, color=ft.Colors.ERROR),
                 ],
                 spacing=12,
             ),
@@ -248,8 +302,13 @@ def create_user_menu(page: ft.Page):
                 radius=20,
             ),
             ft.Container(
-                content=ft.CircleAvatar(
-                    radius=6,
+                content=ft.Container(
+                    content=ft.Icon(sub_icon, size=10, color=ft.Colors.WHITE),
+                    width=14,
+                    height=14,
+                    border_radius=7,
+                    bgcolor=sub_color,
+                    alignment=ft.alignment.center,
                 ),
                 alignment=ft.alignment.bottom_right,
             ),

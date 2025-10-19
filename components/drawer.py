@@ -11,7 +11,8 @@ class DrawerManager:
         0: "/downloads",
         1: "/historico",
         2: "/pagamento",
-        3: "/configuracoes",
+        3: "/feedback",
+        4: "/configuracoes",
     }
 
     def __init__(self, page: ft.Page):
@@ -72,6 +73,15 @@ class DrawerManager:
 
 def create_drawer(page: ft.Page):
     manager = DrawerManager(page)
+
+    KEYBOARD_SHORTCUTS = {
+        "downloads": ("F1", "/downloads"),
+        "historico": ("F2", "/historico"),
+        "pagamento": ("F3", "/pagamento"),
+        "feedback": ("F4", "/feedback"),
+        "configuracoes": ("F5", "/configuracoes"),
+        "tema": ("F6", "toggle_theme"),
+    }
 
     def handle_drawer_change(e):
         selected_index = e.control.selected_index
@@ -193,27 +203,32 @@ def create_drawer(page: ft.Page):
 
     navigation_items = [
         ft.NavigationDrawerDestination(
-            label="Downloads",
+            label=f"Downloads ({KEYBOARD_SHORTCUTS['downloads'][0]})",
             icon=ft.Icons.DOWNLOAD_OUTLINED,
             selected_icon=ft.Icons.DOWNLOAD,
         ),
         ft.NavigationDrawerDestination(
-            label="Histórico",
+            label=f"Histórico ({KEYBOARD_SHORTCUTS['historico'][0]})",
             icon=ft.Icons.HISTORY_OUTLINED,
             selected_icon=ft.Icons.HISTORY,
         ),
         ft.NavigationDrawerDestination(
-            label="Assinaturas",
+            label=f"Pagamento ({KEYBOARD_SHORTCUTS['pagamento'][0]})",
             icon=ft.Icons.SUBSCRIPTIONS_OUTLINED,
             selected_icon=ft.Icons.SUBSCRIPTIONS,
         ),
         ft.NavigationDrawerDestination(
-            label="Configurações",
+            label=f"Feedback ({KEYBOARD_SHORTCUTS['feedback'][0]})",
+            icon=ft.Icons.FEEDBACK_OUTLINED,
+            selected_icon=ft.Icons.FEEDBACK,
+        ),
+        ft.NavigationDrawerDestination(
+            label=f"Configurações ({KEYBOARD_SHORTCUTS['configuracoes'][0]})",
             icon=ft.Icons.SETTINGS_OUTLINED,
             selected_icon=ft.Icons.SETTINGS,
         ),
         ft.NavigationDrawerDestination(
-            label=manager.get_theme_label(),
+            label=f"{manager.get_theme_label()} ({KEYBOARD_SHORTCUTS['tema'][0]})",
             icon=manager.get_current_theme_icon(),
             selected_icon=manager.get_current_theme_icon(),
         ),
