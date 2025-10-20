@@ -55,13 +55,41 @@ def start_download(link, format, diretorio, progress_hook, is_playlist=False):
             info = ydl.extract_info(link, download=True)
 
             if info:
-                return {
-                    "title": info.get("title", "Título Indisponível"),
-                    "thumbnail": info.get("thumbnail", ""),
-                    "filepath": ydl.prepare_filename(info),
-                    "id": info.get("id", ""),
-                }
+                # Para playlists, retorna info completa com entries
+                if is_playlist and "entries" in info:
+                    logger.info(
+                        f"📋 Playlist detectada com {len(info['entries'])} vídeos"
+                    )
+
+                    # Processa cada entry para adicionar filepath
+                    entries_with_filepath = []
+                    for entry in info.get("entries", []):
+                        if entry:
+                            entry_data = {
+                                "id": entry.get("id", ""),
+                                "title": entry.get("title", "Título Indisponível"),
+                                "thumbnail": entry.get("thumbnail", ""),
+                                "filepath": ydl.prepare_filename(entry),
+                            }
+                            entries_with_filepath.append(entry_data)
+
+                    return {
+                        "entries": entries_with_filepath,
+                        "title": info.get("title", "Playlist"),
+                        "id": info.get("id", ""),
+                    }
+
+                # Para vídeos únicos
+                else:
+                    return {
+                        "title": info.get("title", "Título Indisponível"),
+                        "thumbnail": info.get("thumbnail", ""),
+                        "filepath": ydl.prepare_filename(info),
+                        "id": info.get("id", ""),
+                    }
+
             return {}
+
     except Exception as e:
         logger.error("Erro ao iniciar o download: {}", str(e))
         raise e

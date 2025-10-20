@@ -129,6 +129,7 @@ def apply_theme_and_fonts(page: ft.Page, app_state: AppState):
 def setup_window_properties(page: ft.Page):
     page.window.min_width = 1600
     page.window.min_height = 900
+    page.window.center()
     page.title = "Fletube"
 
 
@@ -152,8 +153,10 @@ def setup_keyboard_shortcuts(page: ft.Page, app_state: AppState):
         shortcuts = {
             "f1": "/downloads",
             "f2": "/historico",
-            "f3": "/configuracoes",
-            "f4": lambda: toggle_theme(),
+            "f3": "/pagamento",
+            "f4": "/feedback",
+            "f5": "/configuracoes",
+            "f6": lambda: toggle_theme(),
         }
 
         action = shortcuts.get(key)
@@ -163,6 +166,7 @@ def setup_keyboard_shortcuts(page: ft.Page, app_state: AppState):
                 action()
             else:
                 page.go(action)
+            logger.info(f"Atalho acionado: {key.upper()}")
 
     page.on_keyboard_event = on_key_event
 

@@ -351,6 +351,7 @@ def download_content(
         ],
         actions_alignment=ft.MainAxisAlignment.END,
         ref=dlg_playlist_rf,
+        modal=True,
     )
     page.overlay.append(dlg_playlist)
 
@@ -414,7 +415,7 @@ def download_content(
     file_picker = setup_file_picker(page, on_directory_selected)
 
     img_downloader = ft.Image(
-        src="/images/banner.png",
+        src="/images/thumb_broken.jpg",
         ref=img_downloader_rf,
         width=770,
         height=433,

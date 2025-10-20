@@ -505,13 +505,24 @@ def FeedbackPage(page: ft.Page):
                 alignment=ft.alignment.center,
             ),
             ft.Container(height=20),
-            ft.Text("Selecione uma categoria:", size=14, weight=ft.FontWeight.W_600),
+            ft.Row(
+                controls=[
+                    ft.Text(
+                        "Selecione uma categoria:", size=14, weight=ft.FontWeight.W_600
+                    ),
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+            ),
             ft.Container(height=8),
             ft.Row(
                 [
                     ft.Column(
                         [
-                            ft.Text("Categoria Principal:", size=13, weight=ft.FontWeight.W_500),
+                            ft.Text(
+                                "Categoria Principal:",
+                                size=13,
+                                weight=ft.FontWeight.W_500,
+                            ),
                             ft.Container(height=4),
                             category_radio_group,
                         ],
@@ -520,7 +531,9 @@ def FeedbackPage(page: ft.Page):
                     ),
                     ft.Column(
                         [
-                            ft.Text("Subcategoria:", size=13, weight=ft.FontWeight.W_500),
+                            ft.Text(
+                                "Subcategoria:", size=13, weight=ft.FontWeight.W_500
+                            ),
                             ft.Container(height=4),
                             subcategory_radio_group,
                         ],
@@ -704,8 +717,16 @@ def FeedbackPage(page: ft.Page):
             ),
             ft.Container(height=20),
             ft.Container(
-                content=review_column,
+                content=ft.ListView(
+                    controls=[review_column],
+                    auto_scroll=False,
+                    expand=True,
+                    spacing=12,
+                ),
                 width=450,
+                height=300,
+                border_radius=8,
+                padding=ft.Padding(12, 8, 12, 8),
             ),
             ft.Container(height=24),
             ft.Row(
@@ -724,7 +745,9 @@ def FeedbackPage(page: ft.Page):
             ),
         ],
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        expand=True,
     )
+
 
     step5 = ft.Row(
         [
