@@ -109,11 +109,11 @@ def apply_theme_and_fonts(page: ft.Page, app_state: AppState):
     font_family = app_state.storage.get_setting("font_family", "Padrão")
 
     page.fonts = {
-        "Kanit": "/fonts/Kanit.ttf",
-        "Open Sans": "/fonts/OpenSans.ttf",
-        "BradBunR": "/fonts/BradBunR.ttf",
-        "Heathergreen": "/fonts/Heathergreen.otf",
-        "Ashemark": "/fonts/Ashemark regular.otf",
+        "Baskervville": "/fonts/Baskervville.ttf",
+        "Inter": "/fonts/Inter.ttf",
+        "Nunito": "/fonts/Nunito.ttf",
+        "Poppins": "/fonts/Poppins.otf",
+        "Roboto": "/fonts/Roboto regular.otf",
         "EmOne-SemiBold": "/fonts/EmOne-SemiBold.otf",
         "Gadner": "/fonts/Gadner.ttf",
     }
@@ -131,7 +131,6 @@ def setup_window_properties(page: ft.Page):
     page.window.min_height = 900
     page.window.center()
     page.title = "Fletube"
-
 
 def setup_keyboard_shortcuts(page: ft.Page, app_state: AppState):
     def toggle_theme():

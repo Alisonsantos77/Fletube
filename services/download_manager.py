@@ -139,7 +139,7 @@ class DownloadManager:
                         id=video_id,
                         title=data.get("title", "Título Indisponível"),
                         subtitle=data.get("format", "Formato"),
-                        thumbnail_url=data.get("thumbnail", "/images/logo.png"),
+                        thumbnail_url=data.get("thumbnail", "/images/thumb_broken.jpg"),
                         file_path=data.get("file_path", ""),
                         download_manager=self,
                     )
@@ -274,7 +274,7 @@ class DownloadManager:
                 if video_id not in playlist_videos:
                     playlist_videos[video_id] = {
                         "title": info_dict.get("title", "Título Indisponível"),
-                        "thumbnail": info_dict.get("thumbnail", "/images/logo.png"),
+                        "thumbnail": info_dict.get("thumbnail", "/images/thumb_broken.jpg"),
                         "added_to_ui": False,
                     }
 
@@ -338,7 +338,7 @@ class DownloadManager:
                                     "title": video_info.get("title")
                                     or info_dict.get("title", "Título Indisponível"),
                                     "thumbnail": video_info.get("thumbnail")
-                                    or info_dict.get("thumbnail", "/images/logo.png"),
+                                    or info_dict.get("thumbnail", "/images/thumb_broken.jpg"),
                                     "format": formato,
                                     "file_path": d.get("filename", ""),
                                 },
@@ -407,7 +407,7 @@ class DownloadManager:
                         download_data = {
                             "id": entry_id,
                             "title": entry.get("title", "Título Indisponível"),
-                            "thumbnail": entry.get("thumbnail", "/images/logo.png"),
+                            "thumbnail": entry.get("thumbnail", "/images/thumb_broken.jpg"),
                             "format": formato,
                             "file_path": entry.get("filepath", ""),
                         }
@@ -437,7 +437,7 @@ class DownloadManager:
                 download_data = {
                     "id": video_id_global,
                     "title": result_info.get("title", "Título Indisponível"),
-                    "thumbnail": result_info.get("thumbnail", "/images/logo.png"),
+                    "thumbnail": result_info.get("thumbnail", "/images/thumb_broken.jpg"),
                     "format": formato,
                     "file_path": result_info.get("filepath", ""),
                 }

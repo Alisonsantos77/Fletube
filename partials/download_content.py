@@ -273,7 +273,7 @@ def download_content(
                         continue
                     title = download.get("title", "Título Indisponível")
                     format = download.get("format", "Formato Indisponível")
-                    thumbnail = download.get("thumbnail", "/images/logo.png")
+                    thumbnail = download.get("thumbnail", "/images/thumb_broken.jpg")
                     file_path = download.get("file_path", "")
                     logger.info(
                         f"Adicionando download: ID: {download_id}, Título: {title}, Formato: {format}, Thumbnail: {thumbnail}, Caminho: {file_path}"

@@ -309,7 +309,7 @@ class SidebarList(ft.Container):
                     id=download_id,
                     title=dados.get("title", "Título Indisponível"),
                     subtitle=dados.get("format", "Formato Indisponível"),
-                    thumbnail_url=dados.get("thumbnail", "/images/logo.png"),
+                    thumbnail_url=dados.get("thumbnail", "/images/thumb_broken.jpg"),
                     file_path=dados.get("file_path", ""),
                     download_manager=download_manager,
                 )

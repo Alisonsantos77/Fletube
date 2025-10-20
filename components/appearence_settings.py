@@ -8,12 +8,11 @@ logger = logging.getLogger(__name__)
 
 class AppearanceManager:
     AVAILABLE_FONTS = [
-        "Padrão",
-        "Kanit",
-        "Open Sans",
-        "BradBunR",
-        "Heathergreen",
-        "Ashemark",
+        "Baskervville",
+        "Inter",
+        "Nunito",
+        "Poppins",
+        "Roboto",
         "EmOne-SemiBold",
         "Gadner",
     ]

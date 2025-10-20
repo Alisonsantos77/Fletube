@@ -82,7 +82,9 @@ def HistoryPage(page: ft.Page):
             content=ft.Column(
                 controls=[
                     ft.Image(
-                        src=item.get("thumbnail", "/images/logo.png"),
+                        src=item.get(
+                            "thumbnail", "images/"
+                        ),
                         width=235,
                         height=120,
                         fit=ft.ImageFit.COVER,

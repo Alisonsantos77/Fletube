@@ -13,7 +13,7 @@ def LoginPage(page: ft.Page):
 
     app_logo = ft.Container(
         content=ft.Image(
-            src="/images/logo.png",
+            src="icon.png",
             width=200,
             height=200,
             fit=ft.ImageFit.CONTAIN,
@@ -21,7 +21,7 @@ def LoginPage(page: ft.Page):
         animate_rotation=ft.Animation(1200, ft.AnimationCurve.ELASTIC_OUT),
         animate_scale=ft.Animation(2000, ft.AnimationCurve.EASE_IN_OUT),
         rotate=0,
-        scale=1,
+        scale=0.7,
     )
 
     login_title = ft.Text(
@@ -70,7 +70,7 @@ def LoginPage(page: ft.Page):
 
     def animate_logo():
         app_logo.rotate += pi / 4
-        app_logo.scale = 1.2
+        app_logo.scale = 1.3
         app_logo.update()
 
         async def reset():
