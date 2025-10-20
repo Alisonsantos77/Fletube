@@ -25,7 +25,6 @@ class FletubeStorage:
 
         base_path.mkdir(parents=True, exist_ok=True)
 
-        # Storage para downloads (não criptografado)
         self.downloads = SecureStorage(
             storage_path=base_path / "downloads.json",
             storage_type=StorageType.JSON,
@@ -33,7 +32,6 @@ class FletubeStorage:
             encrypt_data=False,
         )
 
-        # Storage para configurações (não criptografado)
         self.settings = SecureStorage(
             storage_path=base_path / "settings.json",
             storage_type=StorageType.JSON,
@@ -41,8 +39,7 @@ class FletubeStorage:
             encrypt_data=False,
         )
 
-        # Storage para dados sensíveis (CRIPTOGRAFADO)
-        secret_key = os.getenv("FLETUBE_SECRET_KEY", "default_dev_key_change_me")
+        secret_key = os.getenv("SECURE_STORAGE_SECRET_KEY")
         try:
             self.secure = SecureStorage(
                 storage_path=base_path / "secure.enc",
@@ -55,8 +52,6 @@ class FletubeStorage:
         except Exception as e:
             logger.warning(f"Storage seguro não disponível: {e}")
             self.secure = None
-
-    # ===== MÉTODOS DE DOWNLOADS =====
 
     def save_download(self, download_id: str, data: Dict[str, Any]):
         """Salva um download concluído"""
@@ -80,8 +75,6 @@ class FletubeStorage:
         """Limpa todo o histórico de downloads"""
         self.downloads.clear(namespace="completed")
 
-    # ===== MÉTODOS DE CONFIGURAÇÕES =====
-
     def get_setting(self, key: str, default: Any = None) -> Any:
         """Obtém uma configuração"""
         return self.settings.get(key, namespace="app", default=default)
@@ -94,8 +87,6 @@ class FletubeStorage:
         """Retorna todas as configurações"""
         keys = self.settings.list_keys(namespace="app")
         return {k: self.get_setting(k) for k in keys}
-
-    # ===== MÉTODOS DE DADOS SEGUROS =====
 
     def save_secure(self, key: str, value: Any):
         """Salva dado sensível criptografado"""
@@ -110,14 +101,12 @@ class FletubeStorage:
             return self.secure.get(key, namespace="credentials", default=default)
         return default
 
-    # ===== UTILIDADES =====
-
     def export_all(self) -> Dict[str, Any]:
         """Exporta todos os dados para backup"""
         return {
             "downloads": self.downloads.export_data(),
             "settings": self.settings.export_data(),
-            "metadata": {"version": "1.0.0", "app": "Fletube"},
+            "metadata": {"version": "1.3", "app": "Fletube"},
         }
 
     def get_storage_info(self) -> Dict[str, Any]:

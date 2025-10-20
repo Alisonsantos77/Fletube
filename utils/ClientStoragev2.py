@@ -16,7 +16,6 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-# Importa criptografia nativa do Flet
 try:
     from flet.security import decrypt, encrypt
 
@@ -25,7 +24,6 @@ except ImportError:
     FLET_SECURITY_AVAILABLE = False
     logging.warning("flet.security não disponível. Criptografia desabilitada.")
 
-# Configuração de logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -88,8 +86,6 @@ class FileStorageBackend(StorageBackend):
         self.filepath = Path(filepath)
         self.storage_type = storage_type
         self._lock = threading.Lock()
-
-        # Cria o diretório pai se não existir
         self.filepath.parent.mkdir(parents=True, exist_ok=True)
 
     @contextmanager
@@ -105,14 +101,12 @@ class FileStorageBackend(StorageBackend):
         """Salva dados no arquivo com backup automático."""
         with self._file_lock():
             try:
-                # Cria backup se o arquivo já existir
                 if self.filepath.exists():
                     backup_path = self.filepath.with_suffix(
                         f".backup{self.filepath.suffix}"
                     )
                     self.filepath.rename(backup_path)
 
-                # Salva os novos dados
                 if self.storage_type == StorageType.JSON:
                     with open(self.filepath, "w", encoding="utf-8") as f:
                         json.dump(data, f, indent=2, ensure_ascii=False, default=str)
@@ -120,7 +114,6 @@ class FileStorageBackend(StorageBackend):
                     with open(self.filepath, "wb") as f:
                         pickle.dump(data, f)
 
-                # Remove backup após sucesso
                 backup_path = self.filepath.with_suffix(
                     f".backup{self.filepath.suffix}"
                 )
@@ -130,7 +123,6 @@ class FileStorageBackend(StorageBackend):
                 logger.info(f"Dados salvos com sucesso em {self.filepath}")
 
             except Exception as e:
-                # Restaura backup em caso de erro
                 backup_path = self.filepath.with_suffix(
                     f".backup{self.filepath.suffix}"
                 )
@@ -163,7 +155,6 @@ class FileStorageBackend(StorageBackend):
         """Remove o arquivo de dados."""
         with self._file_lock():
             if self.filepath.exists():
-                # Cria backup antes de deletar
                 backup_path = self.filepath.with_suffix(
                     f".deleted{self.filepath.suffix}"
                 )
@@ -247,14 +238,12 @@ class SecureStorage:
             "encrypted": encrypt_data,
         }
 
-        # Validações de criptografia
         if self.encrypt_data:
             if not FLET_SECURITY_AVAILABLE:
                 raise EncryptionError(
                     "flet.security não disponível. Instale: pip install flet"
                 )
             if not self._secret_key:
-                # Tenta obter do ambiente
                 self._secret_key = os.getenv("SECURE_STORAGE_SECRET_KEY")
                 if not self._secret_key:
                     raise EncryptionError(
@@ -263,7 +252,6 @@ class SecureStorage:
                     )
             logger.info("🔐 Modo de criptografia ativado")
 
-        # Configura o backend apropriado
         if use_memory:
             self.backend = MemoryStorageBackend()
         else:
@@ -271,7 +259,6 @@ class SecureStorage:
                 storage_path = Path.home() / ".secure_storage" / "data.json"
             self.backend = FileStorageBackend(Path(storage_path), storage_type)
 
-        # Carrega dados existentes se disponíveis
         self._load_existing()
 
     def _encrypt_value(self, value: Any) -> str:
@@ -288,7 +275,6 @@ class SecureStorage:
             return value
 
         try:
-            # Serializa para JSON se não for string
             if not isinstance(value, str):
                 value = json.dumps(value, default=str)
 
@@ -318,7 +304,6 @@ class SecureStorage:
             decrypted = decrypt(encrypted_value, self._secret_key)
             logger.debug(f"✓ Valor descriptografado: {encrypted_value[:50]}...")
 
-            # Tenta deserializar de JSON
             try:
                 return json.loads(decrypted)
             except (json.JSONDecodeError, TypeError):
@@ -343,7 +328,6 @@ class SecureStorage:
         test_key = "_encryption_test"
         test_value = "SecureStorage_V2_Valid"
 
-        # Se não existe teste, cria um
         if test_key not in self._metadata:
             try:
                 self._metadata[test_key] = self._encrypt_value(test_value)
@@ -351,7 +335,6 @@ class SecureStorage:
             except Exception:
                 return False
 
-        # Valida o teste existente
         try:
             decrypted = self._decrypt_value(self._metadata[test_key])
             return decrypted == test_value
@@ -366,7 +349,6 @@ class SecureStorage:
                 if isinstance(stored_data, dict):
                     self._metadata = stored_data.get("metadata", self._metadata)
 
-                    # Verifica se estava criptografado
                     was_encrypted = self._metadata.get("encrypted", False)
 
                     if was_encrypted != self.encrypt_data:
@@ -375,7 +357,6 @@ class SecureStorage:
                             f"Arquivo: {was_encrypted}, Atual: {self.encrypt_data}"
                         )
 
-                    # Valida a chave se estiver usando criptografia
                     if self.encrypt_data:
                         if not self._validate_encryption_key():
                             raise EncryptionError(
@@ -390,7 +371,7 @@ class SecureStorage:
                     )
 
             except EncryptionError:
-                raise  # Re-lança erros de criptografia
+                raise
             except StorageError as e:
                 logger.warning(f"Não foi possível carregar dados existentes: {e}")
 
@@ -408,7 +389,6 @@ class SecureStorage:
             value: Valor a ser armazenado
             namespace: Namespace opcional para organização
         """
-        # Criptografa o valor se necessário
         stored_value = self._encrypt_value(value) if self.encrypt_data else value
 
         if namespace:
@@ -421,7 +401,7 @@ class SecureStorage:
         self._metadata["last_modified"] = datetime.now().isoformat()
         self._save_if_auto()
 
-        crypto_status = "🔐 criptografado" if self.encrypt_data else "📝 plain"
+        crypto_status = "🔐 criptografado" if self.encrypt_data else "🔓 plain"
         logger.debug(
             f"Valor definido ({crypto_status}): {namespace}.{key if namespace else key}"
         )
@@ -445,7 +425,6 @@ class SecureStorage:
         else:
             stored_value = self._data.get(key, default)
 
-        # Descriptografa se necessário
         if stored_value != default and self.encrypt_data:
             try:
                 return self._decrypt_value(stored_value)
@@ -470,7 +449,7 @@ class SecureStorage:
             if namespace:
                 if namespace in self._data and key in self._data[namespace]:
                     del self._data[namespace][key]
-                    if not self._data[namespace]:  # Remove namespace vazio
+                    if not self._data[namespace]:
                         del self._data[namespace]
                 else:
                     return False
@@ -568,7 +547,6 @@ class SecureStorage:
             Dicionário com metadados
         """
         meta = self._metadata.copy()
-        # Remove o teste de criptografia dos metadados públicos
         meta.pop("_encryption_test", None)
         return meta
 
@@ -583,11 +561,9 @@ class SecureStorage:
             Dicionário com todos os dados
         """
         if decrypt_export and self.encrypt_data:
-            # Descriptografa todos os dados para export
             decrypted_data = {}
             for key, value in self._data.items():
                 if isinstance(value, dict):
-                    # Namespace
                     decrypted_data[key] = {
                         k: self._decrypt_value(v) for k, v in value.items()
                     }
@@ -608,12 +584,10 @@ class SecureStorage:
         """
         imported_data = data.get("data", {})
 
-        # Criptografa dados importados se necessário
         if self.encrypt_data:
             encrypted_import = {}
             for key, value in imported_data.items():
                 if isinstance(value, dict):
-                    # Namespace
                     encrypted_import[key] = {
                         k: self._encrypt_value(v) for k, v in value.items()
                     }
@@ -649,7 +623,6 @@ class SecureStorage:
 
         logger.info("🔄 Iniciando troca de chave de criptografia...")
 
-        # Descriptografa todos os dados
         decrypted_data = {}
         for key, value in self._data.items():
             if isinstance(value, dict):
@@ -659,11 +632,8 @@ class SecureStorage:
             else:
                 decrypted_data[key] = self._decrypt_value(value)
 
-        # Atualiza a chave
-        old_key = self._secret_key
         self._secret_key = new_secret_key
 
-        # Recriptografa todos os dados
         self._data = {}
         for key, value in decrypted_data.items():
             if isinstance(value, dict):
@@ -671,7 +641,6 @@ class SecureStorage:
             else:
                 self._data[key] = self._encrypt_value(value)
 
-        # Atualiza teste de validação
         self._metadata.pop("_encryption_test", None)
         self._validate_encryption_key()
 
@@ -689,17 +658,15 @@ class SecureStorage:
 
     def __repr__(self) -> str:
         """Representação string do objeto."""
-        crypto = "🔐" if self.encrypt_data else "📝"
+        crypto = "🔐" if self.encrypt_data else "🔓"
         return f"SecureStorage({crypto} keys={len(self._data)}, backend={type(self.backend).__name__})"
 
 
-# Exemplos de uso e testes
 if __name__ == "__main__":
     print("=" * 70)
     print("🔐 SECURE STORAGE V2 - TESTES")
     print("=" * 70)
 
-    # Exemplo 1: Armazenamento SEM criptografia (modo legado)
     print("\n=== Exemplo 1: Modo Normal (Sem Criptografia) ===")
     storage = SecureStorage(storage_path="test_normal.json", encrypt_data=False)
 
@@ -711,17 +678,14 @@ if __name__ == "__main__":
     print(f"Username: {storage.get('username')}")
     print(f"Preferences: {storage.get('preferences')}")
 
-    # Exemplo 2: Armazenamento COM criptografia
     print("\n=== Exemplo 2: Modo Seguro (Com Criptografia) ===")
 
-    # Define a secret key
-    SECRET_KEY = "minha_senha_super_secreta_123"
+    SECRET_KEY = os.getenv("SECURE_STORAGE_SECRET_KEY")
 
     secure_storage = SecureStorage(
         storage_path="test_encrypted.json", encrypt_data=True, secret_key=SECRET_KEY
     )
 
-    # Armazena dados sensíveis
     secure_storage.set("api_key", "sk_live_123456789abcdef")
     secure_storage.set("credit_card", "4111-1111-1111-1111", namespace="payment")
     secure_storage.set("password", "minha_senha_secreta", namespace="auth")
@@ -730,7 +694,6 @@ if __name__ == "__main__":
     print(f"Credit Card: {secure_storage.get('credit_card', namespace='payment')}")
     print(f"Password: {secure_storage.get('password', namespace='auth')}")
 
-    # Exemplo 3: Teste de chave inválida
     print("\n=== Exemplo 3: Validação de Chave ===")
     try:
         wrong_storage = SecureStorage(
@@ -741,29 +704,24 @@ if __name__ == "__main__":
     except EncryptionError as e:
         print(f"✓ Erro esperado capturado: {e}")
 
-    # Exemplo 4: Export/Import
     print("\n=== Exemplo 4: Export/Import ===")
     exported = secure_storage.export_data(decrypt_export=True)
     print(f"Dados exportados (descriptografados): {list(exported['data'].keys())}")
 
-    # Exemplo 5: Troca de chave
     print("\n=== Exemplo 5: Troca de Chave de Criptografia ===")
     NEW_SECRET_KEY = "nova_senha_ainda_mais_secreta_456"
     secure_storage.change_secret_key(NEW_SECRET_KEY)
     print(f"✓ Chave alterada! Testando acesso: {secure_storage.get('api_key')}")
 
-    # Exemplo 6: Usando variável de ambiente
     print("\n=== Exemplo 6: Secret Key via Environment ===")
-    os.environ["SECURE_STORAGE_SECRET_KEY"] = "env_secret_789"
     env_storage = SecureStorage(
         storage_path="test_env.json",
         encrypt_data=True,
-        # secret_key obtida automaticamente do ambiente
+        secret_key=SECRET_KEY,
     )
     env_storage.set("env_data", "dados via ambiente")
     print(f"✓ Dados via ambiente: {env_storage.get('env_data')}")
 
-    # Limpeza dos arquivos de exemplo
     print("\n=== Limpeza ===")
     for file in ["test_normal.json", "test_encrypted.json", "test_env.json"]:
         if Path(file).exists():
