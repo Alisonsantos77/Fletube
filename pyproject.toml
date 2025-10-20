@@ -1,6 +1,6 @@
 [project]
 name = "fletube"
-version = "1.0.0"
+version = "1.3"
 description = "Aplicativo desktop Windows para download e gerenciamento de vídeos"
 authors = [
     { name = "Alison Santos", email = "Alisondev77@hotmail.com" }

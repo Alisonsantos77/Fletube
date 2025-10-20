@@ -255,7 +255,7 @@ def create_drawer(page: ft.Page):
                 ft.Row(
                     controls=[
                         ft.Text(
-                            "Versão 1.3.0",
+                            "Versão 1.3",
                             size=12,
                             italic=True,
                             text_align=ft.TextAlign.CENTER,

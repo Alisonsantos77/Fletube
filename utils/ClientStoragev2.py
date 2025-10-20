@@ -234,7 +234,7 @@ class SecureStorage:
         self._data: Dict[str, Any] = {}
         self._metadata: Dict[str, Any] = {
             "created_at": datetime.now().isoformat(),
-            "version": "2.0.0",
+            "version": "1.3",
             "encrypted": encrypt_data,
         }
 
