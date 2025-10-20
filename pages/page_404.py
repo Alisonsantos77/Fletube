@@ -1,7 +1,8 @@
-import flet as ft
-from math import pi
-import random
 import asyncio
+import random
+from math import pi
+
+import flet as ft
 
 
 def PageNotFound(page: ft.Page):

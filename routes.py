@@ -9,8 +9,8 @@ from pages.feedback_page import FeedbackPage
 from pages.history_page import HistoryPage
 from pages.login_page import LoginPage
 from pages.page_404 import PageNotFound
-from pages.settings_page import SettingsPage
 from pages.payment_page import PaymentPageView
+from pages.settings_page import SettingsPage
 from services.download_manager import DownloadManager
 
 # Configuração de logging

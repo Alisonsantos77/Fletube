@@ -49,7 +49,7 @@ class SidebarList(ft.Container):
 
         self.mounted = True
         logger.info("✅ SidebarList inicializado e montado.")
-        
+
     def on_unmount(self, e=None):
         self.mounted = False
         logger.info("⚠️ SidebarList desmontado.")

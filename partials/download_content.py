@@ -5,6 +5,7 @@ import uuid
 from functools import partial
 
 import flet as ft
+import yt_dlp
 from loguru import logger
 
 from services.dlp_service import start_download
@@ -13,7 +14,6 @@ from utils.file_picker_utils import setup_file_picker
 from utils.ui_helpers import show_error_snackbar, show_snackbar
 from utils.validations import UIValidator
 from utils.video_info_extractor import VideoInfoExtractor
-import yt_dlp
 
 
 def download_content(

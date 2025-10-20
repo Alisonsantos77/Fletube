@@ -1,7 +1,8 @@
-import flet as ft
 import random
 import threading
 from math import pi
+
+import flet as ft
 from loguru import logger
 
 

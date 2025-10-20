@@ -8,7 +8,7 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
-    "flet==0.28.3",
+    "flet[all]==0.28.3",
     "requests",
     "python-dotenv",
     "yt-dlp",
@@ -33,3 +33,7 @@ src = "assets"
 
 [tool.poetry]
 package-mode = false
+
+
+[tool.flet.flutter.pubspec.dependency_overrides]
+webview_flutter_android = "4.10.1"

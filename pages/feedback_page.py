@@ -748,7 +748,6 @@ def FeedbackPage(page: ft.Page):
         expand=True,
     )
 
-
     step5 = ft.Row(
         [
             ft.Container(content=step5_left, expand=1),
