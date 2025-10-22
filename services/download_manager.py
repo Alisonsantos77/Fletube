@@ -37,7 +37,7 @@ class DownloadManager:
             logger.warning("página não suporta run_task, usando fallback síncrono")
 
     async def _process_progress_updates(self):
-        logger.info("🚀 Processador de progresso assíncrono iniciado")
+        logger.info("Processador de progresso assíncrono iniciado")
 
         while True:
             try:
@@ -83,7 +83,7 @@ class DownloadManager:
         total_progress = (completed_sum + current_sum) / max(total_videos, 1)
 
         logger.debug(
-            f"📊 [{download_id[:8]}] Progresso: {completed_count}/{total_videos} completos "
+            f"[{download_id[:8]}] Progresso: {completed_count}/{total_videos} completos "
             f"+ {current_sum:.2f} atual = {total_progress*100:.1f}%"
         )
 
@@ -136,7 +136,7 @@ class DownloadManager:
             if status == "add_item":
                 if video_id not in self.sidebar.items:
                     logger.info(
-                        f"➕ Adicionando item à sidebar: {data.get('title', 'N/A')[:30]}..."
+                        f"Adicionando item à sidebar: {data.get('title', 'N/A')[:30]}..."
                     )
                     self.sidebar.add_download_item(
                         id=video_id,
@@ -166,7 +166,7 @@ class DownloadManager:
                         if self.progress_callback:
                             self.progress_callback(1.0, "finished")
                         logger.info(
-                            f"✅ Playlist completa: {len(info['completed'])}/{info['total']}"
+                            f"Playlist completa: {len(info['completed'])}/{info['total']}"
                         )
                 elif self.progress_callback:
                     self.progress_callback(1.0, "finished")
@@ -176,13 +176,13 @@ class DownloadManager:
                     storage.save_download(video_id, data)
 
                 self.sidebar.update_download_item(video_id, 1.0, "finished")
-                logger.info(f"✅ Download concluído: {video_id}")
+                logger.info(f"Download concluído: {video_id}")
 
             elif status == "error":
                 if self.progress_callback:
                     self.progress_callback(0, "error")
                 self.sidebar.update_download_item(video_id, 0, "error")
-                logger.error(f"❌ Erro no download: {video_id}")
+                logger.error(f"Erro no download: {video_id}")
 
             elif status == "cancelled":
                 self.sidebar.update_download_item(video_id, 0, "cancelled")
@@ -223,7 +223,7 @@ class DownloadManager:
 
         # Inicializa controle de progresso para playlists
         if is_playlist:
-            logger.info(f"📋 Inicializando controle de playlist: {download_id}")
+            logger.info(f"Inicializando controle de playlist: {download_id}")
             self.playlist_progress[download_id] = {
                 "total": 0,
                 "completed": [],
@@ -241,13 +241,13 @@ class DownloadManager:
 
         thread.start()
         logger.info(
-            f"🚀 Download iniciado: {download_id[:8]}... (playlist={is_playlist})"
+            f"Download iniciado: {download_id[:8]}... (playlist={is_playlist})"
         )
 
     def cancel_download(self, video_id):
         with self.lock:
             self.cancelled_downloads.add(video_id)
-            logger.info(f"🚫 Vídeo {video_id} marcado para cancelamento")
+            logger.info(f"Vídeo {video_id} marcado para cancelamento")
 
             self.progress_queue.put(
                 {"video_id": video_id, "status": "cancelled", "progress": 0}
@@ -289,7 +289,7 @@ class DownloadManager:
                             playlist_videos
                         )
                         logger.info(
-                            f"📹 Vídeo {len(playlist_videos)} detectado: "
+                            f"Vídeo {len(playlist_videos)} detectado: "
                             f"{info_dict.get('title', 'N/A')[:40]}..."
                         )
 
@@ -299,7 +299,7 @@ class DownloadManager:
             current_video_id = video_id or video_id_global
 
             if current_video_id and self.is_cancelled(current_video_id):
-                logger.info(f"⚠️ Vídeo {current_video_id} cancelado - interrompendo")
+                logger.info(f"Vídeo {current_video_id} cancelado - interrompendo")
                 raise Exception(f"Download cancelado pelo usuário")
 
             current_time = time.time()
@@ -390,7 +390,7 @@ class DownloadManager:
                 logger.error(f"Erro no progress_hook: {e}")
 
         try:
-            logger.info(f"📥 Iniciando download: {link}")
+            logger.info(f"Iniciando download: {link}")
 
             result_info = start_download(
                 link, formato, diretorio, progress_hook, is_playlist
@@ -402,7 +402,7 @@ class DownloadManager:
                 and "entries" in result_info
             ):
                 total_entries = len(result_info["entries"])
-                logger.info(f"📋 Playlist completa: {total_entries} vídeos")
+                logger.info(f"Playlist completa: {total_entries} vídeos")
 
                 # Atualiza total final
                 if download_id in self.playlist_progress:
@@ -490,9 +490,9 @@ class DownloadManager:
 
         except Exception as e:
             if "cancelado pelo usuário" in str(e).lower():
-                logger.info(f"✅ Download {download_id[:8]} cancelado com sucesso")
+                logger.info(f"Download {download_id[:8]} cancelado com sucesso")
             else:
-                logger.error(f"❌ Erro no download: {e}")
+                logger.error(f"Erro no download: {e}")
 
                 if video_id_global:
                     self.progress_queue.put(
@@ -512,7 +512,7 @@ class DownloadManager:
                     del self.download_threads[download_id]
 
                 if download_id in self.playlist_progress:
-                    logger.info(f"🧹 Limpando progresso: {download_id[:8]}")
+                    logger.info(f"Limpando progresso: {download_id[:8]}")
                     del self.playlist_progress[download_id]
 
-            logger.info(f"🏁 Thread de download finalizada: {download_id[:8]}")
+            logger.info(f"Thread de download finalizada: {download_id[:8]}")

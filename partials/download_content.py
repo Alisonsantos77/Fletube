@@ -118,7 +118,7 @@ def download_content(
                     entries_count = len(entries)
 
                     if entries_count > 1:
-                        logger.info(f"📋 Playlist detectada: {entries_count} vídeos")
+                        logger.info(f"Playlist detectada: {entries_count} vídeos")
                         return True, entries_count
 
         except Exception as e:

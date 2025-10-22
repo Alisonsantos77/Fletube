@@ -147,27 +147,31 @@ def setup_keyboard_shortcuts(page: ft.Page, app_state: AppState):
         logger.info(f"Tema alternado para: {new_theme}")
 
     def on_key_event(e: ft.KeyboardEvent):
-        key = e.key.lower()
+        try:
+            key = e.key.lower()
 
-        shortcuts = {
-            "f1": "/downloads",
-            "f2": "/historico",
-            "f3": "/pagamento",
-            "f4": "/feedback",
-            "f5": "/configuracoes",
-            "f6": lambda: toggle_theme(),
-        }
+            shortcuts = {
+                "f1": "/downloads",
+                "f2": "/historico",
+                "f3": "/pagamento",
+                "f4": "/feedback",
+                "f5": "/configuracoes",
+                "f6": lambda: toggle_theme(),
+            }
 
-        action = shortcuts.get(key)
+            action = shortcuts.get(key)
 
-        if action:
-            if callable(action):
-                action()
-            else:
-                page.go(action)
-            logger.info(f"Atalho acionado: {key.upper()}")
+            if action:
+                if callable(action):
+                    action()
+                else:
+                    page.go(action)
+                logger.info(f"Atalho acionado: {key.upper()}")
+        except Exception as ex:
+            logger.error(f"Erro ao processar atalho de teclado: {ex}")
 
     page.on_keyboard_event = on_key_event
+    logger.info("Atalhos de teclado configurados")
 
 
 def setup_lifecycle_handler(page: ft.Page):
@@ -204,49 +208,87 @@ def clear_invalid_auth(page: ft.Page):
     return False
 
 
+def show_error_screen(page: ft.Page, error_message: str):
+    try:
+        page.clean()
+        page.add(
+            ft.Container(
+                content=ft.Column(
+                    [
+                        ft.Icon(ft.Icons.ERROR_OUTLINE, size=100, color=ft.Colors.RED),
+                        ft.Text(
+                            "Erro crítico ao inicializar",
+                            size=24,
+                            weight=ft.FontWeight.BOLD,
+                        ),
+                        ft.Text(error_message, size=14, color=ft.Colors.RED_300),
+                        ft.Container(height=20),
+                        ft.Text("Reinicie o aplicativo", size=16),
+                        ft.Text(
+                            "Logs em: C:\\Users\\Public\\Fletube_logs\\app.log",
+                            size=11,
+                        ),
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
+                expand=True,
+                alignment=ft.alignment.center,
+                padding=40,
+            )
+        )
+        page.update()
+    except:
+        logger.critical("Falha ao exibir tela de erro")
+
+
 def main(page: ft.Page):
-    logger.info("🚀 Iniciando Fletube")
+    try:
+        logger.info("🚀 Iniciando Fletube")
 
-    setup_window_properties(page)
+        setup_window_properties(page)
 
-    clear_invalid_auth(page)
+        clear_invalid_auth(page)
 
-    if not AuthValidator.verify_auth(page):
-        logger.warning("Usuário não autenticado, redirecionando para login")
+        if not AuthValidator.verify_auth(page):
+            logger.warning("Usuário não autenticado, redirecionando para login")
+
+            app_state = AppState(page)
+            page.session.set("app_storage", app_state.storage)
+            page.session.set("download_manager", app_state.download_manager)
+
+            apply_theme_and_fonts(page, app_state)
+            setup_routes(page, app_state.download_manager)
+
+            page.go("/login")
+            return
 
         app_state = AppState(page)
+
         page.session.set("app_storage", app_state.storage)
         page.session.set("download_manager", app_state.download_manager)
 
         apply_theme_and_fonts(page, app_state)
+
+
+        setup_keyboard_shortcuts(page, app_state)
         setup_routes(page, app_state.download_manager)
+        setup_lifecycle_handler(page)
 
-        page.go("/login")
-        return
+        initialize_app_services(page)
 
-    app_state = AppState(page)
+        storage_info = app_state.storage.get_storage_info()
+        logger.info(
+            f"📊 Storage Info: {storage_info['downloads_count']} downloads, "
+            f"{storage_info['settings_count']} configurações salvas"
+        )
 
-    page.session.set("app_storage", app_state.storage)
-    page.session.set("download_manager", app_state.download_manager)
+        page.update()
 
-    apply_theme_and_fonts(page, app_state)
+        logger.info("✅ Fletube inicializado com sucesso")
 
-    setup_routes(page, app_state.download_manager)
-
-    setup_keyboard_shortcuts(page, app_state)
-    setup_lifecycle_handler(page)
-
-    initialize_app_services(page)
-
-    storage_info = app_state.storage.get_storage_info()
-    logger.info(
-        f"📊 Storage Info: {storage_info['downloads_count']} downloads, "
-        f"{storage_info['settings_count']} configurações salvas"
-    )
-
-    page.update()
-
-    logger.info("✅ Fletube inicializado com sucesso")
+    except Exception as e:
+        logger.critical(f"Erro crítico na inicialização: {e}", exc_info=True)
+        show_error_screen(page, str(e))
 
 
 if __name__ == "__main__":

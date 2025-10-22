@@ -51,17 +51,17 @@ class SidebarList(ft.Container):
         self.downloads_column = self.content.controls[2].content
 
         self.mounted = True
-        logger.info("✅ SidebarList inicializado e montado.")
+        logger.info("SidebarList inicializado e montado.")
 
     def on_unmount(self, e=None):
         self.mounted = False
-        logger.info("⚠️ SidebarList desmontado.")
+        logger.info("SidebarList desmontado.")
 
     def add_download_item(
         self, id, title, subtitle, thumbnail_url, file_path, download_manager=None
     ):
         if not self.mounted:
-            logger.warning(f"⚠️ Sidebar desmontada, ignorando adição: {title}")
+            logger.warning(f"Sidebar desmontada, ignorando adição: {title}")
             return
 
         status_text = ft.Text(
@@ -142,17 +142,17 @@ class SidebarList(ft.Container):
             logger.error(f"Erro ao atualizar UI após adicionar item: {e}")
 
         self.update_download_counts()
-        logger.info(f"➕ Download adicionado: {title[:30]}... ({subtitle})")
+        logger.info(f"Download adicionado: {title[:30]}... ({subtitle})")
 
     def on_item_click(self, id):
-        logger.info(f"🖱️ Item clicado: ID {id}")
+        logger.info(f"Item clicado: ID {id}")
 
     def cancel_download(self, download_id, download_manager):
         if download_manager:
             download_manager.cancel_download(download_id)
-            logger.info(f"🚫 Cancelamento solicitado: {download_id}")
+            logger.info(f"Cancelamento solicitado: {download_id}")
         else:
-            logger.warning("⚠️ DownloadManager não disponível")
+            logger.warning("DownloadManager não disponível")
 
     def update_download_item(
         self,
@@ -165,12 +165,12 @@ class SidebarList(ft.Container):
         eta=None,
     ):
         if not self.mounted:
-            logger.warning(f"⚠️ Sidebar desmontada, ignorando atualização: {id}")
+            logger.warning(f"Sidebar desmontada, ignorando atualização: {id}")
             return
 
         item = self.items.get(id)
         if not item:
-            logger.warning(f"⚠️ Item não encontrado: {id}")
+            logger.warning(f"Item não encontrado: {id}")
             return
 
         try:
@@ -257,7 +257,7 @@ class SidebarList(ft.Container):
                 self.update_download_counts()
 
         except Exception as e:
-            logger.error(f"❌ Erro ao atualizar item {id}: {e}")
+            logger.error(f"Erro ao atualizar item {id}: {e}")
 
     def update_download_counts(self):
         try:
@@ -300,7 +300,7 @@ class SidebarList(ft.Container):
 
     def refresh_downloads(self, downloads, download_manager=None):
         if not self.mounted:
-            logger.warning("⚠️ Sidebar desmontada, ignorando refresh")
+            logger.warning("Sidebar desmontada, ignorando refresh")
             return
 
         try:
@@ -323,10 +323,10 @@ class SidebarList(ft.Container):
             except:
                 pass
 
-            logger.info(f"🔄 Sidebar atualizada: {len(downloads)} downloads")
+            logger.info(f"Sidebar atualizada: {len(downloads)} downloads")
 
         except Exception as e:
-            logger.error(f"❌ Erro ao refresh downloads: {e}")
+            logger.error(f"Erro ao refresh downloads: {e}")
 
     def clear_finished_downloads(self):
         if not self.mounted:
@@ -347,7 +347,7 @@ class SidebarList(ft.Container):
             self.update_download_counts()
             self.update()
 
-            logger.info(f"🧹 {len(finished_ids)} downloads finalizados removidos")
+            logger.info(f"{len(finished_ids)} downloads finalizados removidos")
 
         except Exception as e:
             logger.error(f"Erro ao limpar downloads: {e}")

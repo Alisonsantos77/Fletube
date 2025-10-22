@@ -250,7 +250,7 @@ class SecureStorage:
                         "secret_key obrigatória quando encrypt_data=True. "
                         "Forneça via parâmetro ou variável SECURE_STORAGE_SECRET_KEY"
                     )
-            logger.info("🔐 Modo de criptografia ativado")
+            logger.info("Modo de criptografia ativado")
 
         if use_memory:
             self.backend = MemoryStorageBackend()
@@ -363,7 +363,7 @@ class SecureStorage:
                                 "❌ Chave de criptografia inválida! "
                                 "Verifique sua secret_key."
                             )
-                        logger.info("✅ Chave de criptografia validada com sucesso")
+                        logger.info("Chave de criptografia validada com sucesso")
 
                     self._data = stored_data.get("data", {})
                     logger.info(
@@ -621,7 +621,7 @@ class SecureStorage:
         if not self.encrypt_data:
             raise EncryptionError("Criptografia não está ativada")
 
-        logger.info("🔄 Iniciando troca de chave de criptografia...")
+        logger.info("Iniciando troca de chave de criptografia...")
 
         decrypted_data = {}
         for key, value in self._data.items():
@@ -645,7 +645,7 @@ class SecureStorage:
         self._validate_encryption_key()
 
         self.save()
-        logger.info("✅ Chave de criptografia alterada com sucesso!")
+        logger.info("Chave de criptografia alterada com sucesso!")
 
     def __enter__(self):
         """Context manager entrada."""
@@ -729,5 +729,5 @@ if __name__ == "__main__":
             print(f"Arquivo '{file}' removido")
 
     print("\n" + "=" * 70)
-    print("✅ TESTES CONCLUÍDOS COM SUCESSO!")
+    print("TESTES CONCLUÍDOS COM SUCESSO!")
     print("=" * 70)

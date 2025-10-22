@@ -6,39 +6,29 @@ from loguru import logger
 
 
 def setup_logging(app_name="Fletube"):
-    """
-    Setup avançado de logging.
-    Detecta se está compilado e cria pasta de logs na área de trabalho ou pública.
-    """
-
-    # Detecta se está compilado (PyInstaller ou Briefcase)
     if getattr(sys, "frozen", False):
-        base_path = Path(os.environ.get("PUBLIC", "C:\\Users\\Public"))  # pasta pública
+        base_path = Path.home()
     else:
-        base_path = Path.home() / "Desktop"  # usuário normal -> Desktop
+        base_path = Path.home()
 
-    # Pasta de logs
     log_dir = base_path / f"{app_name}_logs"
     log_dir.mkdir(parents=True, exist_ok=True)
 
     log_file = log_dir / "app.log"
 
-    # Remove handlers padrão
     logger.remove()
 
-    # Log para arquivo
     logger.add(
         log_file,
-        rotation="10 MB",  # roda arquivo quando atingir 10MB
-        retention="14 days",  # mantém 14 dias
+        rotation="10 MB",
+        retention="14 days",
         level="INFO",
         format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
         encoding="utf-8",
-        backtrace=True,  # detalha tracebacks
-        diagnose=True,  # diagnóstico avançado
+        backtrace=True,
+        diagnose=True,
     )
 
-    # Log para console
     logger.add(
         lambda msg: print(msg, end=""),
         level="INFO",
@@ -49,7 +39,5 @@ def setup_logging(app_name="Fletube"):
     return logger
 
 
-# Exemplo de uso
-if __name__ == "__main__":
-    log = setup_logging()
-    log.info("Teste de log avançado funcionando!")
+def get_logger():
+    return logger

@@ -102,7 +102,7 @@ class DownloadSettingsManager:
             default_value = True
             self.storage.set_setting("clipboard_monitoring", default_value)
             self.page.client_storage.set("clipboard_monitoring", default_value)
-            logger.info("🎯 Clipboard monitoring inicializado com valor padrão: True")
+            logger.info("Clipboard monitoring inicializado com valor padrão: True")
             return default_value
 
         return stored_value
@@ -113,7 +113,7 @@ class DownloadSettingsManager:
 
         status = "ativado" if enabled else "desativado"
         logger.info(
-            f"📋 Monitoramento de clipboard {status} (sincronizado em ambos storages)"
+            f"Monitoramento de clipboard {status} (sincronizado em ambos storages)"
         )
 
         self._show_success(f"Monitoramento {status}!")
@@ -191,7 +191,7 @@ def DownloadSettings(page: ft.Page):
     def on_clipboard_toggle(e):
         enabled = e.control.value
         manager.set_clipboard_monitoring(enabled)
-        logger.info(f"🔄 Switch do clipboard alterado para: {enabled}")
+        logger.info(f"Switch do clipboard alterado para: {enabled}")
 
     current_directory = manager.get_download_directory()
     is_directory_set = current_directory != manager.DEFAULT_DIRECTORY_MESSAGE
