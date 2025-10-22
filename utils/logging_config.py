@@ -1,5 +1,4 @@
 import os
-import sys
 from pathlib import Path
 
 from loguru import logger
@@ -23,7 +22,6 @@ class EncryptedLogHandler:
         try:
             encrypted_message = encrypt(message, self.secret_key)
             self.buffer.append(encrypted_message + "\n")
-
             if len(self.buffer) >= self.buffer_size:
                 self.flush()
         except Exception as e:
@@ -43,8 +41,11 @@ class EncryptedLogHandler:
 
 
 def setup_logging(app_name="Fletube"):
-    base_path = Path.home()
-    log_dir = base_path / f"{app_name}_logs"
+    app_data_path = os.getenv("FLET_APP_STORAGE_DATA")
+    if not app_data_path:
+        app_data_path = str(Path.home() / ".flet_storage")
+
+    log_dir = Path(app_data_path) / f"{app_name}_logs"
     log_dir.mkdir(parents=True, exist_ok=True)
 
     log_file = log_dir / "app.log"
@@ -55,7 +56,6 @@ def setup_logging(app_name="Fletube"):
 
     if secret_key and FLET_SECURITY_AVAILABLE:
         encrypted_handler = EncryptedLogHandler(log_file, secret_key)
-
         logger.add(
             encrypted_handler.write,
             level="INFO",
@@ -63,7 +63,6 @@ def setup_logging(app_name="Fletube"):
             backtrace=True,
             diagnose=True,
         )
-
         logger.info(f"Sistema de logging criptografado inicializado -> {log_file}")
     else:
         logger.add(
@@ -82,12 +81,13 @@ def setup_logging(app_name="Fletube"):
         if not secret_key:
             logger.warning("SECRET_KEY ausente - logs nao criptografados")
         if not FLET_SECURITY_AVAILABLE:
-            logger.warning("flet.security indisponivel - logs nao criptografados")
+            logger.warning("flet.security indisponível - logs nao criptografados")
 
     logger.add(
         lambda msg: print(msg, end=""),
         level="INFO",
-        format="<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan> - <level>{message}</level>",
+        format="<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | "
+        "<cyan>{name}</cyan>:<cyan>{function}</cyan> - <level>{message}</level>",
     )
 
     return logger
