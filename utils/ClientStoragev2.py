@@ -5,7 +5,6 @@ com suporte para múltiplos backends (arquivo e memória) e criptografia nativa.
 """
 
 import json
-import logging
 import os
 import pickle
 import threading
@@ -16,16 +15,17 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
+from utils.logging_config import setup_logging
+
+logger = setup_logging()
+
 try:
     from flet.security import decrypt, encrypt
 
     FLET_SECURITY_AVAILABLE = True
 except ImportError:
     FLET_SECURITY_AVAILABLE = False
-    logging.warning("flet.security não disponível. Criptografia desabilitada.")
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+    logger.warning("flet.security não disponível. Criptografia desabilitada.")
 
 
 class StorageType(Enum):

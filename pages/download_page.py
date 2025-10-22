@@ -1,5 +1,8 @@
 import flet as ft
-from loguru import logger
+
+from utils.logging_config import setup_logging
+
+logger = setup_logging()
 
 from partials.download_content import download_content
 from partials.download_sidebar import SidebarList

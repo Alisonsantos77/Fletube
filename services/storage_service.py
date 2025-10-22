@@ -8,8 +8,9 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from utils.ClientStoragev2 import SecureStorage, StorageType
+from utils.logging_config import setup_logging
 
-logger = logging.getLogger(__name__)
+logger = setup_logging()
 
 
 class FletubeStorage:

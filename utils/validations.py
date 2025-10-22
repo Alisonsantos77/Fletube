@@ -7,8 +7,9 @@ from typing import Optional
 import flet as ft
 
 from services.supabase_utils import set_user_inactive
+from utils.logging_config import setup_logging
 
-logger = logging.getLogger(__name__)
+logger = setup_logging()
 
 
 @dataclass

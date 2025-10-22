@@ -4,7 +4,10 @@ import uuid
 from queue import Queue
 
 import flet as ft
-from loguru import logger
+
+from utils.logging_config import setup_logging
+
+logger = setup_logging()
 
 from services.dlp_service import start_download
 
@@ -274,7 +277,9 @@ class DownloadManager:
                 if video_id not in playlist_videos:
                     playlist_videos[video_id] = {
                         "title": info_dict.get("title", "Título Indisponível"),
-                        "thumbnail": info_dict.get("thumbnail", "/images/thumb_broken.jpg"),
+                        "thumbnail": info_dict.get(
+                            "thumbnail", "/images/thumb_broken.jpg"
+                        ),
                         "added_to_ui": False,
                     }
 
@@ -338,7 +343,9 @@ class DownloadManager:
                                     "title": video_info.get("title")
                                     or info_dict.get("title", "Título Indisponível"),
                                     "thumbnail": video_info.get("thumbnail")
-                                    or info_dict.get("thumbnail", "/images/thumb_broken.jpg"),
+                                    or info_dict.get(
+                                        "thumbnail", "/images/thumb_broken.jpg"
+                                    ),
                                     "format": formato,
                                     "file_path": d.get("filename", ""),
                                 },
@@ -407,7 +414,9 @@ class DownloadManager:
                         download_data = {
                             "id": entry_id,
                             "title": entry.get("title", "Título Indisponível"),
-                            "thumbnail": entry.get("thumbnail", "/images/thumb_broken.jpg"),
+                            "thumbnail": entry.get(
+                                "thumbnail", "/images/thumb_broken.jpg"
+                            ),
                             "format": formato,
                             "file_path": entry.get("filepath", ""),
                         }
@@ -437,7 +446,9 @@ class DownloadManager:
                 download_data = {
                     "id": video_id_global,
                     "title": result_info.get("title", "Título Indisponível"),
-                    "thumbnail": result_info.get("thumbnail", "/images/thumb_broken.jpg"),
+                    "thumbnail": result_info.get(
+                        "thumbnail", "/images/thumb_broken.jpg"
+                    ),
                     "format": formato,
                     "file_path": result_info.get("filepath", ""),
                 }

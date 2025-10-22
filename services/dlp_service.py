@@ -1,5 +1,8 @@
-from loguru import logger
 from yt_dlp import YoutubeDL
+
+from utils.logging_config import setup_logging
+
+logger = setup_logging()
 
 
 def download_with_ydl(ydl_opts, link):

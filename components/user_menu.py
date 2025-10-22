@@ -4,7 +4,9 @@ from typing import Optional
 
 import flet as ft
 
-logger = logging.getLogger(__name__)
+from utils.logging_config import setup_logging
+
+logger = setup_logging()
 
 
 class UserMenuManager:

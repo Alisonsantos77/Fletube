@@ -1,7 +1,10 @@
 import os
 
 import flet as ft
-from loguru import logger
+
+from utils.logging_config import setup_logging
+
+logger = setup_logging()
 
 from services.send_feedback import send_feedback_email
 from utils.validations import EmailValidator

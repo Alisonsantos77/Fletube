@@ -2,7 +2,10 @@ from pathlib import Path
 from typing import Optional
 
 import flet as ft
-from loguru import logger
+
+from utils.logging_config import setup_logging
+
+logger = setup_logging()
 
 from utils.file_picker_utils import setup_file_picker
 

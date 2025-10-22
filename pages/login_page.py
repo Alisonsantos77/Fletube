@@ -3,7 +3,10 @@ from datetime import datetime, timezone
 from math import pi
 
 import flet as ft
-from loguru import logger
+
+from utils.logging_config import setup_logging
+
+logger = setup_logging()
 
 from services.supabase_utils import update_user_last_login, validate_user
 

@@ -3,7 +3,10 @@ import threading
 from math import pi
 
 import flet as ft
-from loguru import logger
+
+from utils.logging_config import setup_logging
+
+logger = setup_logging()
 
 
 class AnimatedCard(ft.Container):

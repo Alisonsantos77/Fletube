@@ -12,14 +12,10 @@ from pages.page_404 import PageNotFound
 from pages.payment_page import PaymentPageView
 from pages.settings_page import SettingsPage
 from services.download_manager import DownloadManager
+from utils.logging_config import get_logger, setup_logging
 
 # Configuração de logging
-logging.basicConfig(
-    filename="logs/app.log",
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    level=logging.INFO,
-)
-logger = logging.getLogger(__name__)
+logger = setup_logging()
 
 
 def setup_routes(page: ft.Page, download_manager: DownloadManager):

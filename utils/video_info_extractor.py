@@ -2,7 +2,10 @@ from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
 import yt_dlp
-from loguru import logger
+
+from utils.logging_config import setup_logging
+
+logger = setup_logging()
 
 
 @dataclass

@@ -1,5 +1,8 @@
 import flet as ft
-from loguru import logger
+
+from utils.logging_config import setup_logging
+
+logger = setup_logging()
 
 
 class SidebarList(ft.Container):

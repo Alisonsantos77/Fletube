@@ -4,7 +4,10 @@ from datetime import datetime
 import flet as ft
 import pytz
 from dotenv import load_dotenv
-from loguru import logger
+
+from utils.logging_config import setup_logging
+
+logger = setup_logging()
 from supabase import Client, create_client
 
 load_dotenv()

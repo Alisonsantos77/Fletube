@@ -4,7 +4,9 @@ import uuid
 
 import flet as ft
 
-logger = logging.getLogger(__name__)
+from utils.logging_config import setup_logging
+
+logger = setup_logging()
 
 
 def salvar_downloads_bem_sucedidos_session(page: ft.Page, download_data: dict):

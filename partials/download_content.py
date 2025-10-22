@@ -6,7 +6,10 @@ from functools import partial
 
 import flet as ft
 import yt_dlp
-from loguru import logger
+
+from utils.logging_config import setup_logging
+
+logger = setup_logging()
 
 from services.dlp_service import start_download
 from services.download_manager import DownloadManager

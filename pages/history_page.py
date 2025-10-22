@@ -1,7 +1,10 @@
 import os
 
 import flet as ft
-from loguru import logger
+
+from utils.logging_config import setup_logging
+
+logger = setup_logging()
 
 
 def HistoryPage(page: ft.Page):
@@ -82,9 +85,7 @@ def HistoryPage(page: ft.Page):
             content=ft.Column(
                 controls=[
                     ft.Image(
-                        src=item.get(
-                            "thumbnail", "images/"
-                        ),
+                        src=item.get("thumbnail", "images/"),
                         width=235,
                         height=120,
                         fit=ft.ImageFit.COVER,

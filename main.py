@@ -12,8 +12,7 @@ from services.supabase_utils import user_is_active
 from utils.logging_config import get_logger, setup_logging
 from utils.validations import AuthValidator
 
-setup_logging()
-logger = get_logger(__name__)
+logger = setup_logging()
 
 
 class AppState:
@@ -131,6 +130,7 @@ def setup_window_properties(page: ft.Page):
     page.window.min_height = 900
     page.window.center()
     page.title = "Fletube"
+
 
 def setup_keyboard_shortcuts(page: ft.Page, app_state: AppState):
     def toggle_theme():
