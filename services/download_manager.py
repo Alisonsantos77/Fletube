@@ -240,9 +240,7 @@ class DownloadManager:
             self.download_threads[download_id] = thread
 
         thread.start()
-        logger.info(
-            f"Download iniciado: {download_id[:8]}... (playlist={is_playlist})"
-        )
+        logger.info(f"Download iniciado: {download_id[:8]}... (playlist={is_playlist})")
 
     def cancel_download(self, video_id):
         with self.lock:

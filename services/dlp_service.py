@@ -60,9 +60,7 @@ def start_download(link, format, diretorio, progress_hook, is_playlist=False):
             if info:
                 # Para playlists, retorna info completa com entries
                 if is_playlist and "entries" in info:
-                    logger.info(
-                        f"Playlist detectada com {len(info['entries'])} vídeos"
-                    )
+                    logger.info(f"Playlist detectada com {len(info['entries'])} vídeos")
 
                     # Processa cada entry para adicionar filepath
                     entries_with_filepath = []

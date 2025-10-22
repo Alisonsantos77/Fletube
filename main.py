@@ -9,7 +9,7 @@ from services.download_manager import DownloadManager
 from services.send_feedback import retry_failed_feedbacks
 from services.storage_service import FletubeStorage
 from services.supabase_utils import user_is_active
-from utils.logging_config import get_logger, setup_logging
+from utils.logging_config import setup_logging
 from utils.validations import AuthValidator
 
 logger = setup_logging()
@@ -243,7 +243,7 @@ def show_error_screen(page: ft.Page, error_message: str):
 
 def main(page: ft.Page):
     try:
-        logger.info("🚀 Iniciando Fletube")
+        logger.info("Iniciando Fletube")
 
         setup_window_properties(page)
 
@@ -269,7 +269,6 @@ def main(page: ft.Page):
 
         apply_theme_and_fonts(page, app_state)
 
-
         setup_keyboard_shortcuts(page, app_state)
         setup_routes(page, app_state.download_manager)
         setup_lifecycle_handler(page)
@@ -278,13 +277,13 @@ def main(page: ft.Page):
 
         storage_info = app_state.storage.get_storage_info()
         logger.info(
-            f"📊 Storage Info: {storage_info['downloads_count']} downloads, "
+            f"Storage Info: {storage_info['downloads_count']} downloads, "
             f"{storage_info['settings_count']} configurações salvas"
         )
 
         page.update()
 
-        logger.info("✅ Fletube inicializado com sucesso")
+        logger.info("Fletube inicializado com sucesso")
 
     except Exception as e:
         logger.critical(f"Erro crítico na inicialização: {e}", exc_info=True)
@@ -292,7 +291,5 @@ def main(page: ft.Page):
 
 
 if __name__ == "__main__":
-    logger.info("=" * 60)
     logger.info("Fletube - Sistema de Download do YouTube")
-    logger.info("=" * 60)
     ft.app(target=main, assets_dir="assets")

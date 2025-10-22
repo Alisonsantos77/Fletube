@@ -1,9 +1,8 @@
-import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
-from utils.ClientStoragev2 import SecureStorage, StorageType
+from utils.ClientStoragev2 import SecureStorage
 from utils.logging_config import setup_logging
 
 logger = setup_logging()
@@ -22,13 +21,14 @@ class FletubeStorage:
             base_path.mkdir(parents=True, exist_ok=True)
             logger.info(f"Storage path: {base_path}")
         except Exception as e:
-            logger.error(f"Erro ao criar diretório de storage: {e}")
-            raise StorageError(f"Não foi possível criar diretório: {base_path}")
+            logger.error(f"Erro ao criar diretorio de storage: {e}")
+            raise StorageError(f"Nao foi possivel criar diretorio: {base_path}")
+
+        secret_key = os.getenv("SECURE_STORAGE_SECRET_KEY")
 
         try:
             self.downloads = SecureStorage(
                 storage_path=base_path / "downloads.json",
-                storage_type=StorageType.JSON,
                 auto_save=True,
                 encrypt_data=False,
             )
@@ -40,7 +40,6 @@ class FletubeStorage:
         try:
             self.settings = SecureStorage(
                 storage_path=base_path / "settings.json",
-                storage_type=StorageType.JSON,
                 auto_save=True,
                 encrypt_data=False,
             )
@@ -49,21 +48,23 @@ class FletubeStorage:
             logger.error(f"Falha no settings storage: {e}")
             raise
 
-        self.secure = None
-        secret_key = os.getenv("SECURE_STORAGE_SECRET_KEY")
-
-        if secret_key:
-            try:
-                self.secure = SecureStorage(
-                    storage_path=base_path / "secure.enc",
-                    storage_type=StorageType.JSON,
+        try:
+            if secret_key:
+                self.credentials = SecureStorage(
+                    storage_path=base_path / "credentials.enc",
                     auto_save=True,
                     encrypt_data=True,
                     secret_key=secret_key,
                 )
-                logger.info("Storage seguro inicializado")
-            except Exception as e:
-                logger.warning(f"Storage seguro não disponível: {e}")
+                logger.info("Credentials storage inicializado (criptografado)")
+            else:
+                self.credentials = None
+                logger.warning(
+                    "Credentials storage nao disponivel - SECRET_KEY ausente"
+                )
+        except Exception as e:
+            logger.error(f"Falha no credentials storage: {e}")
+            self.credentials = None
 
     def save_download(self, download_id: str, data: Dict[str, Any]):
         try:
@@ -79,10 +80,15 @@ class FletubeStorage:
             logger.error(f"Erro ao recuperar download {download_id}: {e}")
             return None
 
-    def list_downloads(self) -> list:
+    def list_downloads(self) -> List[Dict[str, Any]]:
         try:
             keys = self.downloads.list_keys(namespace="completed")
-            return [self.get_download(k) for k in keys if self.get_download(k)]
+            downloads = []
+            for k in keys:
+                download = self.get_download(k)
+                if download:
+                    downloads.append(download)
+            return downloads
         except Exception as e:
             logger.error(f"Erro ao listar downloads: {e}")
             return []
@@ -100,7 +106,7 @@ class FletubeStorage:
     def clear_downloads(self):
         try:
             self.downloads.clear(namespace="completed")
-            logger.info("Histórico de downloads limpo")
+            logger.info("Historico de downloads limpo")
         except Exception as e:
             logger.error(f"Erro ao limpar downloads: {e}")
 
@@ -125,44 +131,90 @@ class FletubeStorage:
             logger.error(f"Erro ao obter settings: {e}")
             return {}
 
-    def save_secure(self, key: str, value: Any):
-        if self.secure:
-            try:
-                self.secure.set(key, value, namespace="credentials")
-            except Exception as e:
-                logger.error(f"Erro ao salvar dado seguro {key}: {e}")
-        else:
-            logger.warning("Storage seguro não disponível")
+    def save_credential(self, key: str, value: Any):
+        if not self.credentials:
+            logger.warning("Credentials storage nao disponivel")
+            return
 
-    def get_secure(self, key: str, default: Any = None) -> Any:
-        if self.secure:
-            try:
-                return self.secure.get(key, namespace="credentials", default=default)
-            except Exception as e:
-                logger.error(f"Erro ao recuperar dado seguro {key}: {e}")
-                return default
-        return default
+        try:
+            self.credentials.set(key, value, namespace="user")
+            logger.info(f"Credencial salva: {key}")
+        except Exception as e:
+            logger.error(f"Erro ao salvar credencial {key}: {e}")
+
+    def get_credential(self, key: str, default: Any = None) -> Any:
+        if not self.credentials:
+            logger.warning("Credentials storage nao disponivel")
+            return default
+
+        try:
+            return self.credentials.get(key, namespace="user", default=default)
+        except Exception as e:
+            logger.error(f"Erro ao recuperar credencial {key}: {e}")
+            return default
+
+    def delete_credential(self, key: str) -> bool:
+        if not self.credentials:
+            logger.warning("Credentials storage nao disponivel")
+            return False
+
+        try:
+            result = self.credentials.delete(key, namespace="user")
+            if result:
+                logger.info(f"Credencial removida: {key}")
+            return result
+        except Exception as e:
+            logger.error(f"Erro ao deletar credencial {key}: {e}")
+            return False
+
+    def clear_credentials(self):
+        if not self.credentials:
+            logger.warning("Credentials storage nao disponivel")
+            return
+
+        try:
+            self.credentials.clear(namespace="user")
+            logger.info("Credenciais limpas")
+        except Exception as e:
+            logger.error(f"Erro ao limpar credenciais: {e}")
 
     def export_all(self) -> Dict[str, Any]:
         try:
-            return {
+            export_data = {
                 "downloads": self.downloads.export_data(),
                 "settings": self.settings.export_data(),
-                "metadata": {"version": "1.3", "app": "Fletube"},
+                "metadata": {"version": "1.3.0", "app": "Fletube"},
             }
+
+            if self.credentials:
+                export_data["credentials"] = self.credentials.export_data(
+                    decrypt_export=True
+                )
+
+            return export_data
         except Exception as e:
             logger.error(f"Erro ao exportar dados: {e}")
             return {"error": str(e)}
 
     def get_storage_info(self) -> Dict[str, Any]:
         try:
-            return {
-                "downloads_count": len(self.downloads.list_keys(namespace="completed")),
-                "settings_count": len(self.settings.list_keys(namespace="app")),
-                "secure_available": self.secure is not None,
-                "downloads_metadata": self.downloads.get_metadata(),
-                "settings_metadata": self.settings.get_metadata(),
+            downloads_keys = self.downloads.list_keys(namespace="completed")
+            settings_keys = self.settings.list_keys(namespace="app")
+
+            info = {
+                "downloads_count": len(downloads_keys),
+                "settings_count": len(settings_keys),
+                "credentials_available": self.credentials is not None,
+                "downloads_path": str(self.downloads.storage_path),
+                "settings_path": str(self.settings.storage_path),
             }
+
+            if self.credentials:
+                credentials_keys = self.credentials.list_keys(namespace="user")
+                info["credentials_count"] = len(credentials_keys)
+                info["credentials_path"] = str(self.credentials.storage_path)
+
+            return info
         except Exception as e:
             logger.error(f"Erro ao obter info de storage: {e}")
             return {"error": str(e)}
