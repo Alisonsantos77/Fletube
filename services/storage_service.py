@@ -204,6 +204,7 @@ class FletubeStorage:
             info = {
                 "downloads_count": len(downloads_keys),
                 "settings_count": len(settings_keys),
+                "secure_available": self.credentials is not None,
                 "credentials_available": self.credentials is not None,
                 "downloads_path": str(self.downloads.storage_path),
                 "settings_path": str(self.settings.storage_path),
